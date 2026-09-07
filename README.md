@@ -49,3 +49,18 @@ cd frontend && npm test
 - `backend/` — FastAPI: marker detection, CadQuery bin generation, 3MF export.
 - `frontend/` — React + Vite + TypeScript wizard and three.js preview.
 - `TopLeft.svg` / `BottomRight.svg` — printable 100 mm fiducials.
+
+## Boxable visual refresh
+
+The home page introduces the drawer workflow and uses the existing Boxie and drawer
+brand artwork. Open `#/planner` for the four-step studio or `#/markers` for the
+printable markers. Drawer and item state stays in memory while navigating between
+these pages; reloading starts a fresh session, as before.
+
+The refresh preserves the FastAPI backend, catalog, sizing and packing algorithms,
+API contracts, marker SVGs, three.js preview, and 3MF generation. Production hosting
+still needs the Python backend behind `/api`; a static frontend alone cannot measure
+photos or generate geometry. Brand imagery is illustrative, not a generated print plan.
+
+Validation: frontend TypeScript/production build and all 66 existing frontend tests.
+Browser interaction checks and backend integration tests were not run for this UI change.

@@ -18,7 +18,7 @@ export function Step2Grid({ drawer, grid, onBack, onContinue }: Props) {
 
   return (
     <section className="panel">
-      <h1>42 mm grid</h1>
+      <h1>Meet your drawer’s grid</h1>
       <p className="lede">
         Boxable fits as many 42 × 42 mm Gridfinity cells as the measured interior allows, then
         centers the grid in the leftover margin.
@@ -60,7 +60,7 @@ export function Step2Grid({ drawer, grid, onBack, onContinue }: Props) {
                     y={y}
                     width={s}
                     height={s}
-                    fill={((c + r) % 2 === 0) ? "rgba(196,92,38,0.16)" : "rgba(63,107,74,0.12)"}
+                    fill={((c + r) % 2 === 0) ? "rgba(112,72,246,0.14)" : "rgba(194,242,74,0.35)"}
                     stroke="#1a1712"
                     strokeWidth="0.6"
                   />
