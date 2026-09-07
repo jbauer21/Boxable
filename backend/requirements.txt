@@ -1,0 +1,9 @@
+cadquery>=2.4
+cqgridfinity>=0.5.4
+fastapi>=0.110
+uvicorn>=0.29
+pytest>=8.0
+numpy>=1.26
+opencv-python-headless>=4.9
+python-multipart>=0.0.9
+httpx>=0.27
