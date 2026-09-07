@@ -13,6 +13,7 @@ export function PrintMarkers({ onBack }: Props) {
           Print at 100%
         </button>
       </div>
+      <div className="print-intro no-print"><p className="eyebrow">Before the first photo</p><h1>A little help getting the fit right.</h1></div>
       <p className="print-note no-print">
         Print at 100% scale — no “fit to page”. Each square must measure exactly 10 × 10 cm. Place
         TopLeft in the drawer’s top-left corner and BottomRight in the bottom-right, both flat on

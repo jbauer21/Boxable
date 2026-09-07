@@ -8,7 +8,7 @@ import { specsForCustomBox, specsForEntry } from "../lib/itemCatalog";
 import { placedCols, placedRows, type ContainerSpec, type PreviewItemPayload, type PreviewMesh } from "../lib/types";
 import { DrawerPreview3D } from "../components/DrawerPreview3D";
 
-const COLORS = ["#c45c26", "#3f6b4a", "#3b5f8a", "#8b4d6b", "#c4a35a", "#4d5d6b", "#6b3f2a", "#2f6d6a"];
+const COLORS = ["#7048f6", "#496913", "#3856c7", "#a92959", "#825b0e", "#55555b", "#9c3c21", "#16655d"];
 
 interface Props {
   drawer: DrawerState;
@@ -143,7 +143,7 @@ export function Step4Plan({ drawer, grid, groups, onBack }: Props) {
 
   return (
     <section className="panel">
-      <h1>Print plan</h1>
+      <h1>Everything in its place.</h1>
       <p className="lede">
         Bins are sized from each group's standard (or entered) dimensions, then packed into the
         measured grid. Preview the drawer and download a 3MF for your slicer.
@@ -204,7 +204,7 @@ export function Step4Plan({ drawer, grid, groups, onBack }: Props) {
             <DrawerPreview3D meshes={meshes} />
           ) : (
             <div className="preview-3d" style={{ display: "grid", placeItems: "center", color: "#f4ead6" }}>
-              {payload.length === 0 ? "Nothing packed yet" : "Loading 3D preview…"}
+              {payload.length === 0 ? "Nothing packed yet" : previewError ? "3D preview unavailable. Check the error above." : "Loading 3D preview…"}
             </div>
           )}
         </div>

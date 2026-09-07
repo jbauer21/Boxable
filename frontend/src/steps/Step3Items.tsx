@@ -67,7 +67,7 @@ export function Step3Items({ groups, onChange, onBack, onContinue }: Props) {
 
   return (
     <section className="panel">
-      <h1>Group the contents</h1>
+      <h1>What needs a home?</h1>
       <p className="lede">
         Type what is in the drawer — batteries, screws, cables, measuring cups — and pick a match
         from the catalog. Each match knows how it is best stored. Anything the catalog does not
@@ -76,8 +76,9 @@ export function Step3Items({ groups, onChange, onBack, onContinue }: Props) {
 
       <div className="search-box">
         <div className="field">
-          <label>Search objects</label>
+          <label htmlFor="object-search">Search objects</label>
           <input
+            id="object-search"
             ref={inputRef}
             value={query}
             placeholder="e.g. AA battery, wood screws, USB-C cable…"
