@@ -14,6 +14,7 @@ interface Props {
 export function Step1Measure({ drawer, onChange, onContinue }: Props) {
   const [busy, setBusy] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
+  const [showAutoAdjust, setShowAutoAdjust] = useState(false);
   const [error, setError] = useState("");
   const [hot, setHot] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -22,12 +23,30 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
     async (file: File) => {
       setBusy(true);
       setError("");
+      setShowAutoAdjust(false);
       const url = URL.createObjectURL(file);
       try {
         const result = await measureImage(file);
-        const topLeft = result.markers.topLeft ?? defaultQuad("topLeft", result.image_width, result.image_height);
-        const bottomRight =
+        let topLeft = result.markers.topLeft ?? defaultQuad("topLeft", result.image_width, result.image_height);
+        let bottomRight =
           result.markers.bottomRight ?? defaultQuad("bottomRight", result.image_width, result.image_height);
+        let widthMm = result.width_mm;
+        let heightMm = result.height_mm;
+        let confident = result.confident;
+        let message = result.message;
+
+        try {
+          const refined = await refineMarkers(file, topLeft, bottomRight);
+          topLeft = refined.markers.topLeft ?? topLeft;
+          bottomRight = refined.markers.bottomRight ?? bottomRight;
+          widthMm = refined.width_mm ?? widthMm;
+          heightMm = refined.height_mm ?? heightMm;
+          confident = refined.confident;
+          message = refined.message;
+        } catch {
+          // Keep measure results if snap-to-edge refine fails.
+        }
+
         const live = measureDrawer(topLeft, bottomRight);
         onChange((prev) => ({
           ...prev,
@@ -37,10 +56,10 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
           imageHeight: result.image_height,
           topLeft,
           bottomRight,
-          widthMm: live?.widthMm ?? result.width_mm ?? prev.widthMm,
-          heightMm: live?.heightMm ?? result.height_mm ?? prev.heightMm,
-          confident: live?.confident ?? result.confident,
-          message: result.message,
+          widthMm: live?.widthMm ?? widthMm ?? prev.widthMm,
+          heightMm: live?.heightMm ?? heightMm ?? prev.heightMm,
+          confident: live?.confident ?? confident,
+          message,
         }));
       } catch (err) {
         URL.revokeObjectURL(url);
@@ -69,8 +88,7 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
       const result = await refineMarkers(drawer.photoFile, drawer.topLeft, drawer.bottomRight);
       const topLeft = result.markers.topLeft ?? drawer.topLeft;
       const bottomRight = result.markers.bottomRight ?? drawer.bottomRight;
-      const live =
-        topLeft && bottomRight ? measureDrawer(topLeft, bottomRight) : null;
+      const live = topLeft && bottomRight ? measureDrawer(topLeft, bottomRight) : null;
       onChange((prev) => ({
         ...prev,
         topLeft,
@@ -80,7 +98,9 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
         confident: live?.confident ?? result.confident,
         message: result.message,
       }));
-      if (!result.moved) {
+      if (result.moved) {
+        setShowAutoAdjust(false);
+      } else {
         setError(result.message || "No nearby marker edge found. Drag the handles closer and try again.");
       }
     } catch (err) {
@@ -95,9 +115,10 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
       <h1>Measure the drawer</h1>
       <p className="lede">
         Print the two 100 mm markers, place TopLeft and BottomRight in opposite corners of the
-        drawer floor, and upload a photo that shows both. Drag the corner handles if detection
-        misses a printed edge, or use Auto Adjust to snap the outlines onto the printed squares.
-        Depth is typed in — a photo cannot see it.
+        drawer floor, and upload a photo that shows both. Outlines snap to nearby printed edges
+        automatically; drag the corner handles if a marker is still off. If you move a point by
+        accident, Auto Adjust appears so you can snap again. Depth is typed in — a photo cannot
+        see it.
       </p>
 
       <div
@@ -109,7 +130,7 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
         onDragLeave={() => setHot(false)}
         onDrop={onDrop}
       >
-        <p>{busy ? "Detecting markers…" : "Drop a drawer photo here, or"}</p>
+        <p>{busy ? "Detecting and adjusting markers…" : "Drop a drawer photo here, or"}</p>
         <button type="button" className="btn" onClick={() => inputRef.current?.click()} disabled={busy}>
           Choose image
         </button>
@@ -137,6 +158,7 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
             topLeft={drawer.topLeft}
             bottomRight={drawer.bottomRight}
             onMove={(topLeft, bottomRight) => {
+              setShowAutoAdjust(true);
               const live = measureDrawer(topLeft, bottomRight);
               onChange((prev) => ({
                 ...prev,
@@ -154,7 +176,7 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
         </div>
       )}
 
-      {drawer.photoUrl && (
+      {showAutoAdjust && drawer.photoUrl && (
         <div className="row" style={{ marginTop: 14 }}>
           <button
             className="btn secondary"
