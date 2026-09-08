@@ -43,6 +43,10 @@ def geometry_key(spec: ContainerSpec) -> str:
     return repr(sorted(fields.items()))
 
 
+def baseplate_key(length_u: int, width_u: int) -> str:
+    return f"baseplate|{length_u}x{width_u}"
+
+
 def _fmt(value: float) -> str:
     return f"{value:.4f}".rstrip("0").rstrip(".")
 
@@ -84,28 +88,35 @@ def _placement_offset(spec: ContainerSpec, col: int, row: int, rotated: bool,
 
 
 def _transform(dx: float, dy: float, rotated: bool, extents: tuple[float, float, float]) -> str:
-    """4x3 row-major transform: 90° about z when rotated, then translate.
+    """3MF ST_Matrix3D: m00 m01 m02 m10 m11 m12 m20 m21 m22 m30 m31 m32.
+
+    Spec applies this as a row vector [x y z 1] times the 4x4 whose last
+    column is 0 0 0 1, so translation belongs in m30 m31 m32 — not in the
+    4th value of each 3x4 row (the layout we used to emit).
 
     Rotation maps (x, y, z) -> (extent_y - y, x, z) so the mesh's y extent
     becomes the x extent, matching the /preview endpoint.
     """
     if rotated:
         return (
-            f"0 -1 0 {_fmt(extents[1] + dx)} "
-            f"1 0 0 {_fmt(dy)} "
-            f"0 0 1 0"
+            f"0 1 0 -1 0 0 0 0 1 "
+            f"{_fmt(extents[1] + dx)} {_fmt(dy)} 0"
         )
-    return f"1 0 0 {_fmt(dx)} 0 1 0 {_fmt(dy)} 0 0 1 0"
+    return f"1 0 0 0 1 0 0 0 1 {_fmt(dx)} {_fmt(dy)} 0"
 
 
 def build_3mf(
     items: list[tuple[ContainerSpec, int, int, bool]],
     meshes: dict[str, tuple],
+    baseplates: list[tuple[int, int, int, int]] | None = None,
+    baseplate_meshes: dict[str, tuple] | None = None,
 ) -> bytes:
-    """Assemble a 3MF from placed containers.
+    """Assemble a 3MF from placed containers and optional baseplates.
 
     `items` is (spec, col, row, rotated) for each packed instance.
     `meshes` maps geometry_key(spec) -> (vertices, triangles, extents).
+    `baseplates` is (length_u, width_u, col, row).
+    `baseplate_meshes` maps baseplate_key(length_u, width_u) -> mesh tuple.
     """
     key_to_id: dict[str, int] = {}
     object_xml: list[str] = []
@@ -122,6 +133,22 @@ def build_3mf(
             "    </object>"
         )
 
+    plate_key_to_id: dict[str, int] = {}
+    plates = baseplates or []
+    plate_meshes = baseplate_meshes or {}
+    for length_u, width_u, *_ in plates:
+        key = baseplate_key(length_u, width_u)
+        if key in plate_key_to_id:
+            continue
+        oid = len(key_to_id) + len(plate_key_to_id) + 1
+        plate_key_to_id[key] = oid
+        vertices, triangles, _ = plate_meshes[key]
+        object_xml.append(
+            f'    <object id="{oid}" name="Baseplate {length_u}×{width_u}" type="model">\n'
+            f"{_mesh_xml(vertices, triangles)}\n"
+            "    </object>"
+        )
+
     build_items = []
     for spec, col, row, rotated in items:
         key = geometry_key(spec)
@@ -129,6 +156,14 @@ def build_3mf(
         extents = meshes[key][2]
         dx, dy = _placement_offset(spec, col, row, rotated, extents)
         transform = _transform(dx, dy, rotated, extents)
+        build_items.append(f'      <item objectid="{oid}" transform="{transform}"/>')
+
+    for length_u, width_u, col, row in plates:
+        key = baseplate_key(length_u, width_u)
+        oid = plate_key_to_id[key]
+        dx = col * GRID_UNIT_MM
+        dy = row * GRID_UNIT_MM
+        transform = _transform(dx, dy, False, (0.0, 0.0, 0.0))
         build_items.append(f'      <item objectid="{oid}" transform="{transform}"/>')
 
     model = (

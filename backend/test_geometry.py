@@ -3,6 +3,7 @@
 import pytest
 
 from geometry import (
+    POCKET_EDGE_MM,
     ContainerSpec,
     clamped_pocket_depth,
     max_pocket_depth,
@@ -84,6 +85,20 @@ class TestPocketCenters:
     def test_single_pocket_is_centered(self):
         spec = make_spec(pocket_rows=1, pocket_cols=1)
         assert pocket_centers(spec) == [(0.0, 0.0)]
+
+    def test_expanded_1x1_pocket_keeps_edge_wall(self):
+        # Frontend expands a lone pocket to pitch - POCKET_WALL (~30 mm in 1U).
+        spec = make_spec(
+            length_u=1,
+            width_u=1,
+            pocket_rows=1,
+            pocket_cols=1,
+            pocket_diam_mm=30.0,
+        )
+        assert spec.validate() == []
+        assert pocket_centers(spec) == [(0.0, 0.0)]
+        rim = spec.length_u * 42.0 / 2 - spec.pocket_diam_mm / 2
+        assert rim >= POCKET_EDGE_MM - 1e-9
 
     def test_too_tight_raises(self):
         spec = make_spec(pocket_rows=10, pocket_cols=10)

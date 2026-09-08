@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from detection import detect_and_measure, refine_markers
 from geometry import GRID_UNIT_MM, ContainerSpec
 from homography import measure_drawer
-from threemf import build_3mf, geometry_key
+from threemf import baseplate_key, build_3mf, geometry_key
 
 app = FastAPI(title="Boxable", version="1.0")
 app.add_middleware(
@@ -63,8 +63,16 @@ class PreviewRequest(BaseModel):
     items: list[PreviewItem] = Field(min_length=1)
 
 
+class BaseplateItem(BaseModel):
+    length_u: int = Field(ge=1, le=5)
+    width_u: int = Field(ge=1, le=5)
+    col: int = Field(ge=0)
+    row: int = Field(ge=0)
+
+
 class GenerateRequest(BaseModel):
-    items: list[PreviewItem] = Field(min_length=1)
+    items: list[PreviewItem] = Field(default_factory=list)
+    baseplates: list[BaseplateItem] = Field(default_factory=list)
 
 
 @app.get("/health")
@@ -73,8 +81,10 @@ def health():
 
 
 @app.post("/measure")
-async def measure(file: UploadFile = File(...)):
-    image = _decode_upload(await file.read())
+def measure(file: UploadFile = File(...)):
+    # Sync endpoint: FastAPI runs it in the threadpool so the CPU-bound
+    # OpenCV work cannot freeze the event loop.
+    image = _decode_upload(file.file.read())
     result = detect_and_measure(image)
     return {
         "width_mm": result.width_mm,
@@ -117,13 +127,15 @@ def _parse_quad(raw: str, name: str):
 
 
 @app.post("/refine")
-async def refine(
+def refine(
     file: UploadFile = File(...),
     topLeft: str = Form("null"),
     bottomRight: str = Form("null"),
 ):
     """Snap the current overlay quads onto nearby printed marker edges."""
-    image = _decode_upload(await file.read())
+    # Sync endpoint: FastAPI runs it in the threadpool so the CPU-bound
+    # OpenCV work cannot freeze the event loop.
+    image = _decode_upload(file.file.read())
     top_left = _parse_quad(topLeft, "topLeft")
     bottom_right = _parse_quad(bottomRight, "bottomRight")
     if top_left is None and bottom_right is None:
@@ -206,10 +218,12 @@ def preview(request: PreviewRequest):
 
 @app.post("/generate")
 def generate(request: GenerateRequest):
+    if not request.items and not request.baseplates:
+        raise HTTPException(status_code=400, detail="nothing to generate")
     specs = [item.spec.to_spec() for item in request.items]
     _validate(specs)
 
-    from generators import tessellate_container
+    from generators import tessellate_baseplate, tessellate_container
 
     meshes: dict[str, tuple] = {}
     placed: list[tuple[ContainerSpec, int, int, bool]] = []
@@ -219,7 +233,15 @@ def generate(request: GenerateRequest):
             meshes[key] = tessellate_container(spec)
         placed.append((spec, item.col, item.row, item.rotated))
 
-    payload = build_3mf(placed, meshes)
+    plate_meshes: dict[str, tuple] = {}
+    plates: list[tuple[int, int, int, int]] = []
+    for plate in request.baseplates:
+        key = baseplate_key(plate.length_u, plate.width_u)
+        if key not in plate_meshes:
+            plate_meshes[key] = tessellate_baseplate(plate.length_u, plate.width_u)
+        plates.append((plate.length_u, plate.width_u, plate.col, plate.row))
+
+    payload = build_3mf(placed, meshes, plates, plate_meshes)
     return Response(
         content=payload,
         media_type="model/3mf",

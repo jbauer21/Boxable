@@ -14,9 +14,11 @@ import {
   POCKET_FLOOR_MM,
   SCANNED_CLEARANCE_MM,
   UNIT_MM,
-  bestOrientation,
+  bestOrientedSpecs,
+  pocketCapacity,
   pocketDepthForUpright,
   pocketHolders,
+  totalGridCells,
 } from "./itemCatalog";
 import { makeSpec, type ContainerSpec } from "./types";
 
@@ -122,6 +124,11 @@ function specsByGenerator(
  * One round (or hex) hole per item. Uses explicit diameter/length when the
  * catalog has them; otherwise the bounding box cross-section (middle dim)
  * is the hole size and the longest dim is the upright extent.
+ *
+ * Items stand upright as long as the drawer holds the full grip depth, or at
+ * least half the item (partially protruding bits stay stable and grabbable).
+ * Anything taller lies on its side in a full-depth rectangular channel
+ * instead of getting a uselessly shallow upright pocket.
  */
 function cylindricalArraySpecs(
   obj: CatalogObject,
@@ -142,16 +149,43 @@ function cylindricalArraySpecs(
     diameter = middle;
     uprightExtent = longest;
   }
-  return pocketHolders(
+
+  const uprightDepth = Math.max(10, uprightExtent - CELL_GRIP_MM);
+  const upright = pocketHolders(
     obj.name,
     kind,
     n,
     diameter + clearance,
     diameter + clearance,
-    Math.max(10, uprightExtent - CELL_GRIP_MM),
+    uprightDepth,
     heightCap,
     footprintCap,
   );
+  if (upright.length > 0 && fitsHeight(uprightDepth, heightCap)) return upright;
+
+  const maxDepthMm = heightCap * HEIGHT_UNIT_MM - POCKET_FLOOR_MM;
+  const uprightStable = maxDepthMm >= uprightExtent * 0.5;
+
+  const lyingDepth = pocketDepthForUpright(diameter);
+  const lying = fitsHeight(lyingDepth, heightCap)
+    ? pocketHolders(
+        obj.name,
+        "rect_pockets",
+        n,
+        uprightExtent + clearance,
+        diameter + clearance,
+        lyingDepth,
+        heightCap,
+        footprintCap,
+        "cylinder",
+      )
+    : [];
+
+  const candidates: ContainerSpec[][] = [];
+  if (upright.length > 0 && uprightStable) candidates.push(upright);
+  if (lying.length > 0) candidates.push(lying);
+  if (candidates.length === 0) return upright; // last resort: truncated upright
+  return candidates.reduce((a, b) => (totalGridCells(b) < totalGridCells(a) ? b : a));
 }
 
 /** Thin indexed slots (SD cards, cartridges): items stand on edge, one per slot. */
@@ -175,7 +209,12 @@ function cardSlotSpecs(
   );
 }
 
-/** One rect/cyl pocket per counted unit, orientation chosen to fit the drawer. */
+/**
+ * One rect/cyl pocket per counted unit. Every orientation (upright, on edge,
+ * flat) is laid out for the full count and the one consuming the least drawer
+ * floor area wins, so e.g. scissors stand on edge whenever the drawer is deep
+ * enough and only lie flat when it is not.
+ */
 function boundingBoxPockets(
   obj: CatalogObject,
   pocketCount: number,
@@ -183,20 +222,12 @@ function boundingBoxPockets(
   footprintCap: number,
 ): ContainerSpec[] {
   const b = boundingBox(obj);
-  const orientation = bestOrientation(
-    { kind: "box", length: b.x, width: b.y, height: b.z },
-    heightCap,
-    footprintCap,
-  );
-  if (!orientation) return [];
   const extra = Math.max(0, obj.storage.clearance_mm - SCANNED_CLEARANCE_MM);
-  return pocketHolders(
+  return bestOrientedSpecs(
     obj.name,
-    orientation.kind,
+    { kind: "box", length: b.x, width: b.y, height: b.z },
     pocketCount,
-    orientation.pocketSizeXMm + extra,
-    orientation.pocketSizeYMm + extra,
-    orientation.pocketDepthMm,
+    extra,
     heightCap,
     footprintCap,
   );
@@ -434,7 +465,13 @@ function nestedStackSpecs(
   );
 }
 
-/** Flat items on edge in a shared slot; falls back to a flat pile if too tall. */
+/**
+ * Flat items (cards, notepads) stored on edge in shared slots so they stack
+ * laterally. Both on-edge poses are evaluated — standing on the long edge or
+ * the short edge — plus a lying-flat pile as a last resort; over-wide lateral
+ * runs split into the fewest parallel slots that fit. The layout consuming
+ * the fewest grid cells wins (deeper pocket on ties).
+ */
 function horizontalStackSpecs(
   obj: CatalogObject,
   n: number,
@@ -444,34 +481,60 @@ function horizontalStackSpecs(
   const clearance = obj.storage.clearance_mm;
   const [thinnest, middle, longest] = sortedDims(boundingBox(obj));
 
-  const onEdgeDepth = pocketDepthForUpright(middle);
-  if (fitsHeight(onEdgeDepth, heightCap)) {
-    const made = pocketHolders(
-      obj.name,
-      "rect_pockets",
-      1,
-      longest + clearance,
-      thinnest * n + clearance,
-      onEdgeDepth,
-      heightCap,
-      footprintCap,
-    );
-    if (made.length > 0) return made;
+  interface StackCandidate {
+    slots: number;
+    sizeXMm: number;
+    sizeYMm: number;
+    depthMm: number;
+  }
+  const candidates: StackCandidate[] = [];
+
+  // On edge: `up` points out of the drawer, the slot runs along `across`,
+  // and items stack laterally along their thinnest dimension.
+  for (const [up, across] of [
+    [middle, longest],
+    [longest, middle],
+  ] as const) {
+    const depth = pocketDepthForUpright(up);
+    if (!fitsHeight(depth, heightCap)) continue;
+    for (let slots = 1; slots <= n; slots++) {
+      const slotWidth = thinnest * Math.ceil(n / slots) + clearance;
+      if (pocketCapacity(footprintCap, slotWidth) < 1) continue;
+      candidates.push({ slots, sizeXMm: across + clearance, sizeYMm: slotWidth, depthMm: depth });
+      break; // fewest slots for this pose
+    }
   }
 
   // Fallback: lie flat and pile upward.
   const pileDepth = pocketDepthForUpright(thinnest * n);
-  if (!fitsHeight(pileDepth, heightCap)) return [];
-  return pocketHolders(
-    obj.name,
-    "rect_pockets",
-    1,
-    longest + clearance,
-    middle + clearance,
-    pileDepth,
-    heightCap,
-    footprintCap,
-  );
+  if (fitsHeight(pileDepth, heightCap)) {
+    candidates.push({
+      slots: 1,
+      sizeXMm: longest + clearance,
+      sizeYMm: middle + clearance,
+      depthMm: pileDepth,
+    });
+  }
+
+  let best: { specs: ContainerSpec[]; cells: number; depth: number } | null = null;
+  for (const c of candidates) {
+    const made = pocketHolders(
+      obj.name,
+      "rect_pockets",
+      c.slots,
+      c.sizeXMm,
+      c.sizeYMm,
+      c.depthMm,
+      heightCap,
+      footprintCap,
+    );
+    if (made.length === 0) continue;
+    const cells = totalGridCells(made);
+    if (!best || cells < best.cells || (cells === best.cells && c.depthMm > best.depth)) {
+      best = { specs: made, cells, depth: c.depthMm };
+    }
+  }
+  return best?.specs ?? [];
 }
 
 /** Round flat items (coasters, tape rolls) piled in one circular well. */

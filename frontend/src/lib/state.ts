@@ -88,3 +88,14 @@ export const newCustomGroup = (name = "Custom object"): ItemGroup => ({
   widthMm: 40,
   heightMm: 20,
 });
+
+export function cloneGroup(group: ItemGroup): ItemGroup {
+  if (group.mode === "standard") {
+    return {
+      ...group,
+      id: newId(),
+      customCell: { ...group.customCell },
+    };
+  }
+  return { ...group, id: newId() };
+}

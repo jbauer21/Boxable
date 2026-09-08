@@ -1,4 +1,11 @@
-import type { MeasureResponse, Point, PreviewItemPayload, PreviewMesh, RefineResponse } from "./lib/types";
+import type {
+  BaseplatePlacement,
+  MeasureResponse,
+  Point,
+  PreviewItemPayload,
+  PreviewMesh,
+  RefineResponse,
+} from "./lib/types";
 
 const BASE = "/api";
 
@@ -30,11 +37,15 @@ export async function refineMarkers(
   return response.json();
 }
 
-export async function previewMeshes(items: PreviewItemPayload[]): Promise<PreviewMesh[]> {
+export async function previewMeshes(
+  items: PreviewItemPayload[],
+  signal?: AbortSignal,
+): Promise<PreviewMesh[]> {
   const response = await fetch(`${BASE}/preview`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ items }),
+    signal,
   });
   if (!response.ok) {
     const text = await response.text();
@@ -44,11 +55,14 @@ export async function previewMeshes(items: PreviewItemPayload[]): Promise<Previe
   return data.items;
 }
 
-export async function download3mf(items: PreviewItemPayload[]): Promise<Blob> {
+export async function download3mf(
+  items: PreviewItemPayload[],
+  baseplates: BaseplatePlacement[] = [],
+): Promise<Blob> {
   const response = await fetch(`${BASE}/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ items }),
+    body: JSON.stringify({ items, baseplates }),
   });
   if (!response.ok) {
     const text = await response.text();

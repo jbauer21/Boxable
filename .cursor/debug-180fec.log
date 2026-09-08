@@ -1,0 +1,150 @@
+{"sessionId": "180fec", "hypothesisId": "B", "location": "main.py:startup", "message": "uvicorn startup complete", "data": {"port": 8000}, "timestamp": 1788818935125}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/health", "method": "GET", "status": 200}, "timestamp": 1788818938182}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:measure", "message": "measure entered", "data": {"filename": "IMG_6856.png"}, "timestamp": 1788818956535}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/measure", "method": "POST", "status": 200}, "timestamp": 1788818957507}
+{"sessionId":"180fec","hypothesisId":"C","location":"api.ts:measureImage","message":"measure response","data":{"ok":true,"status":200},"timestamp":1788818957511}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/refine", "method": "POST", "status": 200}, "timestamp": 1788818959769}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 1}, "timestamp": 1788818970530}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 1}, "timestamp": 1788818970532}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788818986544}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788818986544}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:measure", "message": "measure entered", "data": {"filename": "IMG_6856.png"}, "timestamp": 1788831654382}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/measure", "method": "POST", "status": 200}, "timestamp": 1788831655354}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/refine", "method": "POST", "status": 200}, "timestamp": 1788831658245}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 1}, "timestamp": 1788831669064}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 1}, "timestamp": 1788831669105}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831670911}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831670911}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788831684851}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788831684892}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831695353}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831695353}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788831703718}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831704044}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788831713868}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788831713869}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831718027}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831718028}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788831738195}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788831738195}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831748664}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831748665}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788831771022}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788831771257}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831773436}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831773437}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788831795362}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788831795363}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831808879}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831808880}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788831989388}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788831989390}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831990268}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788831990269}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832007812}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832007813}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832015141}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832015142}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832066065}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832066320}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832630305}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832630774}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832630776}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832631005}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832631601}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832631903}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832633339}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832633589}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832634438}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832634736}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832635609}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832635845}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832636070}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832636372}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832639947}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832640196}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788832642867}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788832643312}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788833146809}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833147072}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788833162217}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833162597}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 3}, "timestamp": 1788833162598}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833162883}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788833174719}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788833174719}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833175018}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833175019}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788833261479}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833261667}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788833262196}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833262452}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788833262969}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833263121}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 2}, "timestamp": 1788833267407}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833267564}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 4}, "timestamp": 1788833484002}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 4}, "timestamp": 1788833484025}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833521850}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833521852}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 4}, "timestamp": 1788833611796}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 4}, "timestamp": 1788833611803}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833621987}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833621988}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 5}, "timestamp": 1788833660899}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 5}, "timestamp": 1788833661054}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833665474}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833665474}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 5}, "timestamp": 1788833693317}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 5}, "timestamp": 1788833693319}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833694348}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833694348}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 6}, "timestamp": 1788833786154}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 6}, "timestamp": 1788833786154}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833802490}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833802491}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 6}, "timestamp": 1788833879318}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 6}, "timestamp": 1788833879319}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833880466}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833880466}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 7}, "timestamp": 1788833893276}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 7}, "timestamp": 1788833893276}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833898260}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833898261}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 9}, "timestamp": 1788833936924}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 9}, "timestamp": 1788833936925}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833938383}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788833938383}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/generate", "method": "POST", "status": 200}, "timestamp": 1788834083409}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 8}, "timestamp": 1788834349822}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 8}, "timestamp": 1788834351702}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 8}, "timestamp": 1788834352625}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 8}, "timestamp": 1788834361903}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 8}, "timestamp": 1788834361919}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834410979}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834411059}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834413192}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834413192}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834413193}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 7}, "timestamp": 1788834465818}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 7}, "timestamp": 1788834465818}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834467292}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834467293}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 6}, "timestamp": 1788834479793}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 6}, "timestamp": 1788834479887}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834481046}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834481046}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 6}, "timestamp": 1788834584501}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 6}, "timestamp": 1788834584502}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834595046}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834595048}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 7}, "timestamp": 1788834616144}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 7}, "timestamp": 1788834616144}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834619390}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834619390}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 9}, "timestamp": 1788834677069}
+{"sessionId": "180fec", "hypothesisId": "D", "location": "main.py:preview", "message": "preview entered", "data": {"n": 9}, "timestamp": 1788834677069}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834678567}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/preview", "method": "POST", "status": 200}, "timestamp": 1788834678567}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/generate", "method": "POST", "status": 200}, "timestamp": 1788834695890}
+{"sessionId": "180fec", "hypothesisId": "C", "location": "main.py:http", "message": "request finished", "data": {"path": "/openapi.json", "method": "GET", "status": 200}, "timestamp": 1788834778970}

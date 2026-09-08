@@ -10,7 +10,7 @@ GRID_UNIT_MM = 42.0
 HEIGHT_UNIT_MM = 7.0
 
 # Wall the solid box keeps around the pocket field, per side.
-POCKET_EDGE_MM = 3.5
+POCKET_EDGE_MM = 5.0
 # Minimum solid material between two adjacent pockets.
 POCKET_WALL_MM = 2.0
 # Solid floor preserved under the deepest pocket.

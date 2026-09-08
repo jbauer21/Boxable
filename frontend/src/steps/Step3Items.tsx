@@ -7,7 +7,7 @@ import {
   type CatalogObject,
 } from "../lib/catalog";
 import { countLabel, displayName } from "../lib/itemCatalog";
-import { newCatalogGroup, newCustomGroup, type ItemGroup } from "../lib/state";
+import { cloneGroup, newCatalogGroup, newCustomGroup, type ItemGroup } from "../lib/state";
 
 interface Props {
   groups: ItemGroup[];
@@ -59,6 +59,12 @@ export function Step3Items({ groups, onChange, onBack, onContinue }: Props) {
   };
 
   const remove = (id: string) => onChange(groups.filter((g) => g.id !== id));
+
+  const duplicate = (id: string) => {
+    const group = groups.find((g) => g.id === id);
+    if (!group) return;
+    onChange([...groups, cloneGroup(group)]);
+  };
 
   const catalogCountLabel = (objectId: string): string => {
     const obj = getCatalogObject(objectId);
@@ -237,9 +243,14 @@ export function Step3Items({ groups, onChange, onBack, onContinue }: Props) {
                 </>
               )}
             </div>
-            <button className="btn secondary" type="button" onClick={() => remove(group.id)}>
-              Remove
-            </button>
+            <div className="group-card-actions">
+              <button className="btn secondary" type="button" onClick={() => duplicate(group.id)}>
+                Duplicate
+              </button>
+              <button className="btn secondary" type="button" onClick={() => remove(group.id)}>
+                Remove
+              </button>
+            </div>
           </div>
         ))}
       </div>

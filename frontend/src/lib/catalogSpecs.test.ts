@@ -21,7 +21,7 @@ describe("specsForCatalogGroup", () => {
     const spec = result[0];
     const obj = getCatalogObject("battery_aa")!;
     expect(spec.kind).toBe("cyl_pockets");
-    expect(spec.pocket_diam_mm).toBe(obj.geometry.diameter_mm! + obj.storage.clearance_mm);
+    expect(spec.pocket_diam_mm).toBeGreaterThanOrEqual(obj.geometry.diameter_mm! + obj.storage.clearance_mm);
     expect(spec.pocket_rows * spec.pocket_cols * spec.quantity).toBeGreaterThanOrEqual(12);
   });
 
@@ -32,7 +32,7 @@ describe("specsForCatalogGroup", () => {
     const obj = getCatalogObject("drill_bit")!;
     expect(spec.kind).toBe("cyl_pockets");
     // drill_bit bbox is 90x8x8: middle dim (8) is the hole size.
-    expect(spec.pocket_diam_mm).toBe(8 + obj.storage.clearance_mm);
+    expect(spec.pocket_diam_mm).toBeGreaterThanOrEqual(8 + obj.storage.clearance_mm);
     expect(spec.pocket_rows * spec.pocket_cols * spec.quantity).toBeGreaterThanOrEqual(10);
   });
 
@@ -43,7 +43,7 @@ describe("specsForCatalogGroup", () => {
     const obj = getCatalogObject("hex_bit")!;
     expect(obj.generation.backend_generator).toBe("hex_pockets");
     expect(spec.kind).toBe("hex_pockets");
-    expect(spec.pocket_diam_mm).toBe(7 + obj.storage.clearance_mm);
+    expect(spec.pocket_diam_mm).toBeGreaterThanOrEqual(7 + obj.storage.clearance_mm);
   });
 
   it("builds thin on-edge slots for SD cards", () => {
@@ -53,8 +53,8 @@ describe("specsForCatalogGroup", () => {
     const obj = getCatalogObject("sd_card")!;
     expect(spec.kind).toBe("rect_pockets");
     // sd_card bbox is 32x24x2.1: slot is longest x thinnest.
-    expect(spec.pocket_length_mm).toBeCloseTo(32 + obj.storage.clearance_mm);
-    expect(spec.pocket_width_mm).toBeCloseTo(2.1 + obj.storage.clearance_mm);
+    expect(spec.pocket_length_mm).toBeGreaterThanOrEqual(32 + obj.storage.clearance_mm);
+    expect(spec.pocket_width_mm).toBeGreaterThanOrEqual(2.1 + obj.storage.clearance_mm);
     expect(spec.pocket_rows * spec.pocket_cols).toBeGreaterThanOrEqual(6);
   });
 
@@ -180,6 +180,80 @@ describe("specsForCatalogGroup", () => {
         );
       }
     }
+  });
+
+  it("stands playing cards on edge in a lateral stack", () => {
+    const result = specs("board_game_cards", 1, 9, 6);
+    expect(result).toHaveLength(1);
+    const spec = result[0];
+    const obj = getCatalogObject("board_game_cards")!;
+    // bbox 90x65x18: on edge means 65 up, slot 90 long, deck 18 across.
+    expect(spec.kind).toBe("rect_pockets");
+    expect(spec.pocket_length_mm).toBeGreaterThanOrEqual(90 + obj.storage.clearance_mm);
+    expect(spec.pocket_width_mm).toBeGreaterThanOrEqual(18 + obj.storage.clearance_mm);
+    expect(spec.pocket_depth_mm).toBeCloseTo(53); // 65 - 12 grip, not a flat pile
+  });
+
+  it("widens the card slot laterally for more decks", () => {
+    const one = specs("board_game_cards", 1, 9, 6)[0];
+    const three = specs("board_game_cards", 3, 9, 6)[0];
+    const obj = getCatalogObject("board_game_cards")!;
+    expect(three.pocket_width_mm).toBeGreaterThanOrEqual(18 * 3 + obj.storage.clearance_mm);
+    expect(three.pocket_depth_mm).toBeCloseTo(one.pocket_depth_mm); // still on edge
+  });
+
+  it("splits an over-wide lateral card stack into parallel slots", () => {
+    const result = specs("board_game_cards", 20, 9, 6);
+    expect(result).toHaveLength(1);
+    const spec = result[0];
+    const slots = spec.pocket_rows * spec.pocket_cols * spec.quantity;
+    expect(slots).toBeGreaterThan(1);
+    // Slots stay on edge rather than degrading to a flat pile.
+    expect(spec.pocket_depth_mm).toBeCloseTo(53);
+    expect(slots * Math.floor((spec.pocket_width_mm - 2) / 18)).toBeGreaterThanOrEqual(20);
+  });
+
+  it("stands scissors on edge when the drawer is deep enough", () => {
+    const result = specs("scissors_office", 1, 11, 6);
+    expect(result).toHaveLength(1);
+    const spec = result[0];
+    // bbox 205x75x15 on edge: 75 up, footprint 205 x 15 (+ clearance).
+    expect(spec.kind).toBe("rect_pockets");
+    expect(spec.pocket_length_mm).toBeGreaterThanOrEqual(208);
+    expect(spec.pocket_width_mm).toBeGreaterThanOrEqual(18);
+    expect(spec.pocket_depth_mm).toBeCloseTo(63); // 75 - 12 grip
+  });
+
+  it("lays scissors flat when the drawer is shallow", () => {
+    const result = specs("scissors_office", 1, 4, 6);
+    expect(result).toHaveLength(1);
+    const spec = result[0];
+    expect(spec.pocket_length_mm).toBeGreaterThanOrEqual(208);
+    expect(spec.pocket_width_mm).toBeGreaterThanOrEqual(78);
+    expect(spec.pocket_depth_mm).toBeCloseTo(9); // 15 - 40% grip
+  });
+
+  it("lays tall cylinders on their side instead of truncating the pocket", () => {
+    // Drawer of 4U holds a 20mm pocket; an AA battery upright needs 38.5mm
+    // and would keep less than half the cell, so it lies down at full depth.
+    const result = specs("battery_aa", 4, 4, 6);
+    expect(result).toHaveLength(1);
+    const spec = result[0];
+    const obj = getCatalogObject("battery_aa")!;
+    expect(spec.kind).toBe("rect_pockets");
+    expect(spec.pocket_length_mm).toBeGreaterThanOrEqual(obj.geometry.length_mm! + obj.storage.clearance_mm);
+    expect(spec.pocket_width_mm).toBeGreaterThanOrEqual(obj.geometry.diameter_mm! + obj.storage.clearance_mm);
+    // Full lying depth (diameter minus grip), not clamped by the drawer.
+    expect(spec.pocket_depth_mm).toBeCloseTo(14.5 - Math.min(12, 14.5 * 0.4));
+    expect(spec.pocket_depth_mm).toBeLessThanOrEqual(spec.height_u * HEIGHT_UNIT_MM - POCKET_FLOOR_MM);
+  });
+
+  it("keeps drill bits upright with a stable truncated pocket", () => {
+    // 90mm bits in a 9U drawer keep 55mm (>half) of the bit in the pocket,
+    // so the ergonomic upright array is still preferred over lying flat.
+    const result = specs("drill_bit", 10, 9, 6);
+    expect(result).toHaveLength(1);
+    expect(result[0].kind).toBe("cyl_pockets");
   });
 
   it("produces a container for every catalog object that fits the 6U maximum", () => {

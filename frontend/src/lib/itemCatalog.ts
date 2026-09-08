@@ -1,4 +1,4 @@
-import type { ContainerKind, ContainerSpec } from "./types";
+import type { ContainerKind, ContainerSpec, ItemShape } from "./types";
 import { makeSpec } from "./types";
 
 export type ItemCategory = "Batteries" | "Tools" | "Electronics";
@@ -124,7 +124,7 @@ export interface ItemEntry {
 
 export const UNIT_MM = 42;
 export const HEIGHT_UNIT_MM = 7;
-export const POCKET_EDGE_MM = 3.5;
+export const POCKET_EDGE_MM = 5;
 export const POCKET_WALL_MM = 2.0;
 export const POCKET_FLOOR_MM = 8.0;
 export const CELL_GRIP_MM = 12.0;
@@ -148,6 +148,13 @@ export function pocketCapacity(units: number, size: number): number {
   return Math.max(0, Math.floor(usable / (size + POCKET_WALL_MM)));
 }
 
+/** Grow a pocket to fill its cell, leaving POCKET_WALL_MM between neighbors. Never shrinks. */
+function expandedPocketSize(units: number, count: number, minSize: number): number {
+  const usable = units * UNIT_MM - 2 * POCKET_EDGE_MM;
+  const pitch = usable / count;
+  return Math.max(minSize, pitch - POCKET_WALL_MM);
+}
+
 export function pocketHolders(
   name: string,
   kind: ContainerKind,
@@ -157,6 +164,7 @@ export function pocketHolders(
   depth: number,
   maxHeightU: number,
   maxFootprintU: number,
+  itemShape?: ItemShape,
 ): ContainerSpec[] {
   const maxU = maxFootprintU;
   const maxCapacity = pocketCapacity(maxU, sizeX) * pocketCapacity(maxU, sizeY);
@@ -199,12 +207,17 @@ export function pocketHolders(
     pocket_rows: rows,
     pocket_cols: cols,
     pocket_depth_mm: effectiveDepth,
+    item_shape:
+      itemShape ?? (kind === "hex_pockets" ? "hex" : kind === "cyl_pockets" ? "cylinder" : "box"),
   });
   if (kind === "rect_pockets") {
-    spec.pocket_length_mm = sizeX;
-    spec.pocket_width_mm = sizeY;
+    spec.pocket_length_mm = expandedPocketSize(best.l, cols, sizeX);
+    spec.pocket_width_mm = expandedPocketSize(best.w, rows, sizeY);
   } else {
-    spec.pocket_diam_mm = sizeX;
+    spec.pocket_diam_mm = Math.min(
+      expandedPocketSize(best.l, cols, sizeX),
+      expandedPocketSize(best.w, rows, sizeY),
+    );
   }
   return [spec];
 }
@@ -346,6 +359,64 @@ export function orientationCandidates(shape: ScannedShape): ScannedOrientation[]
   });
 }
 
+/** Total drawer floor area (in 42 mm grid cells) a set of specs consumes. */
+export function totalGridCells(specs: ContainerSpec[]): number {
+  return specs.reduce((sum, s) => sum + s.length_u * s.width_u * s.quantity, 0);
+}
+
+/**
+ * Lays out the requested count in every physically valid orientation and
+ * keeps the layout that consumes the fewest grid cells of drawer floor.
+ * Drawer height is a free resource, so on equal floor area the more vertical
+ * pose (deeper pocket) wins; orientations whose full depth does not fit the
+ * drawer are rejected outright rather than truncated.
+ *
+ * `extraClearanceMm` is added on top of the SCANNED_CLEARANCE_MM already
+ * baked into the orientation candidates (catalog objects carry their own
+ * clearance).
+ */
+export function bestOrientedSpecs(
+  name: string,
+  shape: ScannedShape,
+  count: number,
+  extraClearanceMm: number,
+  maxHeightU: number,
+  maxFootprintU: number,
+): ContainerSpec[] {
+  const heightCap = Math.max(2, maxHeightU);
+  const footprintCap = Math.max(1, Math.min(maxFootprintU, 6));
+  const n = Math.max(1, count);
+  let best: { specs: ContainerSpec[]; cells: number; depth: number; bins: number } | null = null;
+  for (const candidate of orientationCandidates(shape)) {
+    if (candidate.pocketDepthMm <= 0) continue;
+    const requiredHeightU = Math.ceil((candidate.pocketDepthMm + POCKET_FLOOR_MM) / HEIGHT_UNIT_MM);
+    if (Math.max(2, requiredHeightU) > heightCap) continue;
+    const made = pocketHolders(
+      name,
+      candidate.kind,
+      n,
+      candidate.pocketSizeXMm + extraClearanceMm,
+      candidate.pocketSizeYMm + extraClearanceMm,
+      candidate.pocketDepthMm,
+      heightCap,
+      footprintCap,
+      shape.kind === "cylinder" ? "cylinder" : "box",
+    );
+    if (made.length === 0) continue;
+    const cells = totalGridCells(made);
+    const bins = made.reduce((sum, m) => sum + m.quantity, 0);
+    if (
+      !best ||
+      cells < best.cells ||
+      (cells === best.cells && candidate.pocketDepthMm > best.depth) ||
+      (cells === best.cells && candidate.pocketDepthMm === best.depth && bins < best.bins)
+    ) {
+      best = { specs: made, cells, depth: candidate.pocketDepthMm, bins };
+    }
+  }
+  return best?.specs ?? [];
+}
+
 export function bestOrientation(
   shape: ScannedShape,
   maxHeightU: number,
@@ -382,18 +453,7 @@ export function specsForCustomBox(
   maxFootprintU: number,
 ): ContainerSpec[] {
   const shape: ScannedShape = { kind: "box", length: lengthMm, width: widthMm, height: heightMm };
-  const orientation = bestOrientation(shape, maxHeightU, maxFootprintU);
-  if (!orientation) return [];
-  return pocketHolders(
-    name || "Custom object",
-    orientation.kind,
-    Math.max(1, count),
-    orientation.pocketSizeXMm,
-    orientation.pocketSizeYMm,
-    orientation.pocketDepthMm,
-    Math.max(2, maxHeightU),
-    Math.max(1, Math.min(maxFootprintU, 6)),
-  );
+  return bestOrientedSpecs(name || "Custom object", shape, count, 0, maxHeightU, maxFootprintU);
 }
 
 export function specsForCustomCylinder(
@@ -405,16 +465,5 @@ export function specsForCustomCylinder(
   maxFootprintU: number,
 ): ContainerSpec[] {
   const shape: ScannedShape = { kind: "cylinder", diameter: diameterMm, length: lengthMm };
-  const orientation = bestOrientation(shape, maxHeightU, maxFootprintU);
-  if (!orientation) return [];
-  return pocketHolders(
-    name || "Custom object",
-    orientation.kind,
-    Math.max(1, count),
-    orientation.pocketSizeXMm,
-    orientation.pocketSizeYMm,
-    orientation.pocketDepthMm,
-    Math.max(2, maxHeightU),
-    Math.max(1, Math.min(maxFootprintU, 6)),
-  );
+  return bestOrientedSpecs(name || "Custom object", shape, count, 0, maxHeightU, maxFootprintU);
 }

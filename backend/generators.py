@@ -10,9 +10,10 @@ import math
 import threading
 
 import cadquery as cq
-from cqgridfinity import GridfinityBox
+from cqgridfinity import GridfinityBaseplate, GridfinityBox
 
 from geometry import (
+    POCKET_EDGE_MM,
     ContainerSpec,
     clamped_pocket_depth,
     max_pocket_depth,
@@ -45,6 +46,52 @@ def export_stl(solid: cq.Workplane, path: str):
 # The OCC kernel is not thread-safe either.
 _CAD_LOCK = threading.Lock()
 
+# Tessellation takes seconds per geometry; identical specs are requested
+# repeatedly (every preview refresh re-sends the same payload). Cache results
+# across requests, keyed by geometry. Checked inside _CAD_LOCK so a
+# duplicate request waits for the first compute and then reuses it.
+_MESH_CACHE: dict[str, tuple] = {}
+
+
+def _weld_mesh(vertices, triangles, digits=4):
+    """Merge vertices that OCC duplicated on shared face boundaries.
+
+    shape.tessellate() triangulates each face independently, so edges that
+    are geometrically coincident do not share indices. 3MF consumers then
+    report tens of thousands of open edges.
+    """
+    key_to_new: dict[tuple, int] = {}
+    new_verts: list = []
+    remap = [0] * len(vertices)
+    for i, vertex in enumerate(vertices):
+        key = (round(vertex[0], digits), round(vertex[1], digits), round(vertex[2], digits))
+        index = key_to_new.get(key)
+        if index is None:
+            index = len(new_verts)
+            key_to_new[key] = index
+            new_verts.append(vertex)
+        remap[i] = index
+    new_tris = []
+    for a, b, c in triangles:
+        ia, ib, ic = remap[a], remap[b], remap[c]
+        if ia != ib and ib != ic and ic != ia:
+            new_tris.append((ia, ib, ic))
+    return new_verts, new_tris
+
+
+def _tessellate_shape(shape, cache_key: str, tolerance: float):
+    cached = _MESH_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+    bb = shape.BoundingBox()
+    raw_vertices, triangles = shape.tessellate(tolerance)
+    vertices = [(v.x - bb.xmin, v.y - bb.ymin, v.z - bb.zmin) for v in raw_vertices]
+    vertices, welded_tris = _weld_mesh(vertices, [tuple(t) for t in triangles])
+    extents = (bb.xlen, bb.ylen, bb.zlen)
+    result = (vertices, welded_tris, extents)
+    _MESH_CACHE[cache_key] = result
+    return result
+
 
 def tessellate_container(spec: ContainerSpec, tolerance: float = 0.5):
     """Triangle mesh of the container for the app's 3D preview.
@@ -53,13 +100,30 @@ def tessellate_container(spec: ContainerSpec, tolerance: float = 0.5):
     the origin and the base resting on z=0, so callers can place the mesh in
     drawer coordinates.
     """
+    from threemf import geometry_key
+
+    cache_key = f"{geometry_key(spec)}|tol={tolerance}"
     with _CAD_LOCK:
-        shape = build_container(spec).val()
-        bb = shape.BoundingBox()
-        raw_vertices, triangles = shape.tessellate(tolerance)
-    vertices = [(v.x - bb.xmin, v.y - bb.ymin, v.z - bb.zmin) for v in raw_vertices]
-    extents = (bb.xlen, bb.ylen, bb.zlen)
-    return vertices, [tuple(t) for t in triangles], extents
+        cached = _MESH_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
+        return _tessellate_shape(build_container(spec).val(), cache_key, tolerance)
+
+
+def tessellate_baseplate(length_u: int, width_u: int, tolerance: float = 0.5):
+    """Triangle mesh of a Gridfinity baseplate, origin at the footprint corner."""
+    if not 1 <= length_u <= 5 or not 1 <= width_u <= 5:
+        raise ValueError(f"baseplate {length_u}x{width_u} is outside 1x1–5x5")
+    cache_key = f"baseplate|{length_u}x{width_u}|tol={tolerance}"
+    with _CAD_LOCK:
+        cached = _MESH_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
+        return _tessellate_shape(
+            GridfinityBaseplate(length_u, width_u).render().val(),
+            cache_key,
+            tolerance,
+        )
 
 
 def _build_bin(spec: ContainerSpec) -> cq.Workplane:
@@ -116,7 +180,7 @@ def _build_spool(spec: ContainerSpec) -> cq.Workplane:
     bb = solid.val().BoundingBox()
     cx, cy, top_z = _footprint_center(solid)
 
-    outer_r = min(bb.xlen, bb.ylen) / 2 - 3.0
+    outer_r = min(bb.xlen, bb.ylen) / 2 - POCKET_EDGE_MM
     post_r = max(outer_r * 0.4, 7.0)
     depth = clamped_pocket_depth(spec) if spec.pocket_depth_mm > 0 else max_pocket_depth(spec)
 

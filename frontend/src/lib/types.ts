@@ -9,10 +9,14 @@ export type ContainerKind =
   | "rect_pockets"
   | "spool";
 
+/** How the stored object should be drawn in the 3D preview. */
+export type ItemShape = "cylinder" | "hex" | "box";
+
 export interface ContainerSpec {
   id: string;
   name: string;
   kind: ContainerKind;
+  item_shape?: ItemShape;
   length_u: number;
   width_u: number;
   height_u: number;
@@ -111,4 +115,11 @@ export interface PreviewItemPayload {
   col: number;
   row: number;
   rotated: boolean;
+}
+
+export interface BaseplatePlacement {
+  length_u: number;
+  width_u: number;
+  col: number;
+  row: number;
 }

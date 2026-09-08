@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { download3mf, previewMeshes } from "../api";
 import type { DrawerState, ItemGroup } from "../lib/state";
+import { tileBaseplates } from "../lib/baseplateTiler";
 import { packContainers, usedCells } from "../lib/containerPacker";
 import type { GridLayout } from "../lib/gridLayout";
 import { specsForCatalogGroup } from "../lib/catalogSpecs";
@@ -75,6 +76,7 @@ export function Step4Plan({ drawer, grid, groups, onBack }: Props) {
       })),
     [pack],
   );
+  const baseplates = useMemo(() => tileBaseplates(grid.cols, grid.rows), [grid.cols, grid.rows]);
   const payloadKey = payload.map((p) => `${p.spec.id}:${p.col}:${p.row}:${p.rotated}`).join("|");
 
   const [meshes, setMeshes] = useState<PreviewMesh[] | null>(null);
@@ -86,17 +88,18 @@ export function Step4Plan({ drawer, grid, groups, onBack }: Props) {
       setMeshes([]);
       return;
     }
-    let cancelled = false;
+    const controller = new AbortController();
     setPreviewError("");
-    previewMeshes(payload)
+    previewMeshes(payload, controller.signal)
       .then((items) => {
-        if (!cancelled) setMeshes(items);
+        if (!controller.signal.aborted) setMeshes(items);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setPreviewError(err instanceof Error ? err.message : "Preview failed");
+        if (controller.signal.aborted) return;
+        setPreviewError(err instanceof Error ? err.message : "Preview failed");
       });
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [payload, payloadKey]);
 
@@ -114,15 +117,23 @@ export function Step4Plan({ drawer, grid, groups, onBack }: Props) {
       return acc;
     }, {});
 
-  const manifestText = Object.values(manifest)
-    .map((row) => `print ${row.count} × ${row.name}  (${row.size})`)
-    .join("\n");
+  const baseManifest = baseplates.reduce<Record<string, { size: string; count: number }>>((acc, plate) => {
+    const key = `${plate.length_u}x${plate.width_u}`;
+    if (!acc[key]) acc[key] = { size: `${plate.length_u}×${plate.width_u}`, count: 0 };
+    acc[key].count += 1;
+    return acc;
+  }, {});
+
+  const manifestText = [
+    ...Object.values(manifest).map((row) => `print ${row.count} × ${row.name}  (${row.size})`),
+    ...Object.values(baseManifest).map((row) => `print ${row.count} × Baseplate  (${row.size})`),
+  ].join("\n");
 
   const onDownload = async () => {
     setBusy(true);
     setPreviewError("");
     try {
-      const blob = await download3mf(payload);
+      const blob = await download3mf(payload, baseplates);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -197,11 +208,24 @@ export function Step4Plan({ drawer, grid, groups, onBack }: Props) {
               </g>
             );
           })}
+          {baseplates.map((plate) => (
+            <rect
+              key={`base-${plate.col}-${plate.row}-${plate.length_u}x${plate.width_u}`}
+              x={pad + plate.col * grid.unitMm * scale}
+              y={pad + plate.row * grid.unitMm * scale}
+              width={plate.length_u * grid.unitMm * scale}
+              height={plate.width_u * grid.unitMm * scale}
+              fill="none"
+              stroke="#1a1712"
+              strokeOpacity="0.45"
+              strokeWidth="2"
+            />
+          ))}
         </svg>
         <div>
           {previewError && <div className="banner warn">{previewError}</div>}
           {meshes && meshes.length > 0 ? (
-            <DrawerPreview3D meshes={meshes} />
+            <DrawerPreview3D meshes={meshes} placed={payload} />
           ) : (
             <div className="preview-3d" style={{ display: "grid", placeItems: "center", color: "#f4ead6" }}>
               {payload.length === 0 ? "Nothing packed yet" : previewError ? "3D preview unavailable. Check the error above." : "Loading 3D preview…"}
@@ -216,7 +240,7 @@ export function Step4Plan({ drawer, grid, groups, onBack }: Props) {
         <button className="btn secondary" type="button" onClick={onBack}>
           Back
         </button>
-        <button className="btn" type="button" disabled={payload.length === 0 || busy} onClick={() => void onDownload()}>
+        <button className="btn" type="button" disabled={(baseplates.length === 0 && payload.length === 0) || busy} onClick={() => void onDownload()}>
           {busy ? "Building 3MF…" : "Download 3MF"}
         </button>
       </div>
