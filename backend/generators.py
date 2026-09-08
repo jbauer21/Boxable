@@ -8,6 +8,7 @@ a cable around.
 
 import math
 import threading
+from pathlib import Path
 
 import cadquery as cq
 from cqgridfinity import GridfinityBaseplate, GridfinityBox
@@ -20,6 +21,17 @@ from geometry import (
     pocket_centers,
 )
 
+# Recessed label cut into one outer side wall (readable from outside).
+_ENGRAVE_DEPTH_MM = 0.5
+_ENGRAVE_FONT_PATH = Path(__file__).resolve().parent / "fonts" / "DejaVuSans.ttf"
+# Approximate DejaVu Sans advance width as a fraction of fontsize.
+_ENGRAVE_CHAR_WIDTH = 0.6
+_ENGRAVE_WALL_MARGIN_MM = 8.0
+_ENGRAVE_FONT_MIN_MM = 4.0
+_ENGRAVE_FONT_MAX_MM = 10.0
+# Ignore Gridfinity base skirt faces near z=0 when picking a side wall.
+_ENGRAVE_SIDE_MIN_Z_MM = 5.0
+
 
 def build_container(spec: ContainerSpec) -> cq.Workplane:
     problems = spec.validate()
@@ -27,12 +39,117 @@ def build_container(spec: ContainerSpec) -> cq.Workplane:
         raise ValueError(f"{spec.name}: " + "; ".join(problems))
 
     if spec.kind == "bin":
-        return _build_bin(spec)
-    if spec.kind in ("cyl_pockets", "hex_pockets", "rect_pockets"):
-        return _build_pocket_holder(spec)
-    if spec.kind == "spool":
-        return _build_spool(spec)
-    raise ValueError(f"unknown kind '{spec.kind}'")
+        solid = _build_bin(spec)
+    elif spec.kind in ("cyl_pockets", "hex_pockets", "rect_pockets"):
+        solid = _build_pocket_holder(spec)
+    elif spec.kind == "spool":
+        solid = _build_spool(spec)
+    else:
+        raise ValueError(f"unknown kind '{spec.kind}'")
+    return _engrave_name(solid, spec)
+
+
+def _engrave_fontsize(max_width_mm: float, wall_height_mm: float) -> float:
+    by_width = max_width_mm * 0.12
+    by_height = wall_height_mm * 0.35
+    return max(_ENGRAVE_FONT_MIN_MM, min(_ENGRAVE_FONT_MAX_MM, by_width, by_height))
+
+
+def _fit_engrave_label(name: str, max_width_mm: float, fontsize: float) -> str:
+    """Truncate with an ellipsis when the name won't fit the wall width."""
+    name = name.strip()
+    if not name:
+        return ""
+
+    def text_width(s: str) -> float:
+        return len(s) * fontsize * _ENGRAVE_CHAR_WIDTH
+
+    if text_width(name) <= max_width_mm:
+        return name
+    ellipsis = "…"
+    for n in range(len(name), 0, -1):
+        candidate = name[:n].rstrip() + ellipsis
+        if text_width(candidate) <= max_width_mm:
+            return candidate
+    return ellipsis
+
+
+def _outer_side_wall_point(solid: cq.Workplane):
+    """Center of the largest outer vertical wall above the Gridfinity base skirt."""
+    best_area = 0.0
+    best_center = None
+    best_normal = None
+    for face in solid.faces().vals():
+        normal = face.normalAt()
+        if abs(normal.z) > 0.25:
+            continue
+        center = face.Center()
+        if center.z < _ENGRAVE_SIDE_MIN_Z_MM:
+            continue
+        area = face.Area()
+        if area > best_area:
+            best_area = area
+            best_center = (center.x, center.y, center.z)
+            best_normal = (normal.x, normal.y, normal.z)
+    if best_center is None:
+        return None
+    return best_center, best_normal
+
+
+def _engrave_name(solid: cq.Workplane, spec: ContainerSpec) -> cq.Workplane:
+    """Cut `spec.name` into one outer side wall. On failure, return `solid` unchanged."""
+    raw = (spec.name or "").strip()
+    if not raw:
+        return solid
+    if not _ENGRAVE_FONT_PATH.is_file():
+        return solid
+
+    try:
+        picked = _outer_side_wall_point(solid)
+        if picked is None:
+            return solid
+        wall, normal = picked
+        outward = cq.Vector(*normal)
+        world_up = cq.Vector(0, 0, 1)
+        # Outside viewer looks along -outward (toward the face). Camera right = forward × up.
+        view_forward = outward.multiply(-1.0)
+        camera_right = view_forward.cross(world_up)
+        if camera_right.Length < 1e-6:
+            return solid
+        camera_right = camera_right.normalized()
+
+        bb = solid.val().BoundingBox()
+        # Text runs along the wall's long horizontal axis.
+        if abs(normal[1]) >= abs(normal[0]):
+            max_width = bb.xlen - _ENGRAVE_WALL_MARGIN_MM
+        else:
+            max_width = bb.ylen - _ENGRAVE_WALL_MARGIN_MM
+        if max_width < _ENGRAVE_FONT_MIN_MM:
+            return solid
+
+        wall_height = max(bb.zlen - _ENGRAVE_SIDE_MIN_Z_MM, _ENGRAVE_FONT_MIN_MM)
+        fontsize = _engrave_fontsize(max_width, wall_height)
+        label = _fit_engrave_label(raw, max_width, fontsize)
+        if not label:
+            return solid
+
+        # Right-handed outward frame: upright + LTR for CAD/3MF outside viewing.
+        plane = cq.Plane(origin=cq.Vector(*wall), xDir=camera_right, normal=outward)
+        text = (
+            cq.Workplane(plane)
+            .text(
+                label,
+                fontsize,
+                -_ENGRAVE_DEPTH_MM,
+                fontPath=str(_ENGRAVE_FONT_PATH),
+                combine=False,
+                halign="center",
+                valign="center",
+            )
+        )
+        return solid.cut(text)
+    except Exception:
+        return solid
 
 
 def export_stl(solid: cq.Workplane, path: str):

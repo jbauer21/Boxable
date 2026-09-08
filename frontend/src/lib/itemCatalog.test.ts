@@ -62,7 +62,7 @@ describe("ItemCatalog", () => {
     expect(spec.pocket_depth_mm).toBeLessThanOrEqual(spec.height_u * 7 - POCKET_FLOOR_MM + 1e-9);
   });
 
-  it("expands a single pocket to leave a ~5 mm outer wall", () => {
+  it("expands a single pocket to leave a ~3 mm outer wall", () => {
     const spec = specs("batteryAA", 1)[0];
     expect(spec.length_u).toBe(1);
     expect(spec.width_u).toBe(1);
@@ -109,6 +109,16 @@ describe("ItemCatalog", () => {
     const spec = specs("cableSpool", 3)[0];
     expect(spec.kind).toBe("spool");
     expect(spec.quantity).toBe(3);
+    expect(spec.name).toBe("Cable spool");
+  });
+
+  it("uses an optional name override on the spec", () => {
+    const result = specsForEntry(
+      { type: "batteryAA", count: 4, customCell: { diameterMm: 18.6, lengthMm: 65.2 }, name: "Kitchen AA" },
+      9,
+      6,
+    );
+    expect(result[0].name).toBe("Kitchen AA");
   });
 
   it("produces valid specs for every catalog type", () => {

@@ -1,5 +1,5 @@
 import type { CustomCellSize, ItemType } from "./itemCatalog";
-import { DEFAULT_CUSTOM_CELL } from "./itemCatalog";
+import { DEFAULT_CUSTOM_CELL, displayName } from "./itemCatalog";
 import type { Point } from "./types";
 
 export type WizardStep = 1 | 2 | 3 | 4;
@@ -9,6 +9,7 @@ export type ItemGroup =
       id: string;
       mode: "standard";
       type: ItemType;
+      name: string;
       count: number;
       customCell: CustomCellSize;
     }
@@ -67,6 +68,7 @@ export const newStandardGroup = (type: ItemType): ItemGroup => ({
   id: newId(),
   mode: "standard",
   type,
+  name: displayName(type),
   count: 1,
   customCell: { ...DEFAULT_CUSTOM_CELL },
 });

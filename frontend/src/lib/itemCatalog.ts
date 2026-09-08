@@ -120,11 +120,12 @@ export interface ItemEntry {
   type: ItemType;
   count: number;
   customCell: CustomCellSize;
+  name?: string;
 }
 
 export const UNIT_MM = 42;
 export const HEIGHT_UNIT_MM = 7;
-export const POCKET_EDGE_MM = 5;
+export const POCKET_EDGE_MM = 3;
 export const POCKET_WALL_MM = 2.0;
 export const POCKET_FLOOR_MM = 8.0;
 export const CELL_GRIP_MM = 12.0;
@@ -246,7 +247,7 @@ export function specsForEntry(entry: ItemEntry, maxHeightU: number, maxFootprint
   const count = Math.max(1, entry.count);
   const heightCap = Math.max(2, maxHeightU);
   const footprintCap = Math.max(1, Math.min(maxFootprintU, 6));
-  const name = displayName(entry.type);
+  const name = entry.name?.trim() || displayName(entry.type);
 
   switch (entry.type) {
     case "batteryAA":

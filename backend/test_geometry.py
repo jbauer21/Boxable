@@ -87,13 +87,13 @@ class TestPocketCenters:
         assert pocket_centers(spec) == [(0.0, 0.0)]
 
     def test_expanded_1x1_pocket_keeps_edge_wall(self):
-        # Frontend expands a lone pocket to pitch - POCKET_WALL (~30 mm in 1U).
+        # Frontend expands a lone pocket to pitch - POCKET_WALL (~34 mm in 1U).
         spec = make_spec(
             length_u=1,
             width_u=1,
             pocket_rows=1,
             pocket_cols=1,
-            pocket_diam_mm=30.0,
+            pocket_diam_mm=34.0,
         )
         assert spec.validate() == []
         assert pocket_centers(spec) == [(0.0, 0.0)]

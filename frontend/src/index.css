@@ -318,6 +318,35 @@ h2 {
   align-items: stretch;
 }
 
+.editable-name {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: text;
+  color: inherit;
+}
+
+.editable-name:hover {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.editable-name-input {
+  display: block;
+  width: min(100%, 280px);
+  font: inherit;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 4px 8px;
+}
+
 .swatch {
   width: 12px;
   height: 12px;

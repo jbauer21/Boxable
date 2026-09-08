@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { EditableName } from "../components/EditableName";
 import {
   categoryDisplayName,
   getCatalogObject,
@@ -129,7 +130,11 @@ export function Step3Items({ groups, onChange, onBack, onContinue }: Props) {
             <div>
               {group.mode === "standard" ? (
                 <>
-                  <strong>{displayName(group.type)}</strong>
+                  <EditableName
+                    value={group.name}
+                    fallback={displayName(group.type)}
+                    onChange={(name) => update(group.id, { name })}
+                  />
                   <div className="row" style={{ marginTop: 8 }}>
                     <div className="field">
                       <label>Count ({countLabel(group.type)})</label>
@@ -174,7 +179,11 @@ export function Step3Items({ groups, onChange, onBack, onContinue }: Props) {
                 </>
               ) : group.mode === "catalog" ? (
                 <>
-                  <strong>{group.name}</strong>
+                  <EditableName
+                    value={group.name}
+                    fallback={getCatalogObject(group.objectId)?.name ?? group.name}
+                    onChange={(name) => update(group.id, { name })}
+                  />
                   <div className="row" style={{ marginTop: 8 }}>
                     <div className="field">
                       <label>Count ({catalogCountLabel(group.objectId)})</label>
@@ -194,15 +203,12 @@ export function Step3Items({ groups, onChange, onBack, onContinue }: Props) {
                 </>
               ) : (
                 <>
-                  <strong>Custom object</strong>
+                  <EditableName
+                    value={group.name}
+                    fallback="Custom object"
+                    onChange={(name) => update(group.id, { name })}
+                  />
                   <div className="row" style={{ marginTop: 8 }}>
-                    <div className="field">
-                      <label>Name</label>
-                      <input
-                        value={group.name}
-                        onChange={(e) => update(group.id, { name: e.target.value })}
-                      />
-                    </div>
                     <div className="field">
                       <label>Count</label>
                       <input

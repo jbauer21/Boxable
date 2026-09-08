@@ -4,8 +4,7 @@ import type { DrawerState, ItemGroup } from "../lib/state";
 import { tileBaseplates } from "../lib/baseplateTiler";
 import { packContainers, usedCells } from "../lib/containerPacker";
 import type { GridLayout } from "../lib/gridLayout";
-import { specsForCatalogGroup } from "../lib/catalogSpecs";
-import { specsForCustomBox, specsForEntry } from "../lib/itemCatalog";
+import { specsForGroup } from "../lib/groupSpecs";
 import { placedCols, placedRows, type ContainerSpec, type PreviewItemPayload, type PreviewMesh } from "../lib/types";
 import { DrawerPreview3D } from "../components/DrawerPreview3D";
 
@@ -16,28 +15,6 @@ interface Props {
   grid: GridLayout;
   groups: ItemGroup[];
   onBack: () => void;
-}
-
-function specsForGroup(group: ItemGroup, maxHeightU: number, maxFootprintU: number): ContainerSpec[] {
-  if (group.mode === "standard") {
-    return specsForEntry(
-      { type: group.type, count: group.count, customCell: group.customCell },
-      maxHeightU,
-      maxFootprintU,
-    );
-  }
-  if (group.mode === "catalog") {
-    return specsForCatalogGroup(group.objectId, group.count, maxHeightU, maxFootprintU);
-  }
-  return specsForCustomBox(
-    group.name,
-    group.count,
-    group.lengthMm,
-    group.widthMm,
-    group.heightMm,
-    maxHeightU,
-    maxFootprintU,
-  );
 }
 
 function colorFor(name: string): string {
@@ -56,7 +33,7 @@ export function Step4Plan({ drawer, grid, groups, onBack }: Props) {
     for (const group of groups) {
       const made = specsForGroup(group, maxHeightU, maxFootprintU);
       if (made.length === 0) {
-        skippedNames.push(group.mode === "standard" ? group.type : group.name);
+        skippedNames.push(group.name);
       }
       all.push(...made);
     }
