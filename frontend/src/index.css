@@ -531,3 +531,8 @@ html{scroll-behavior:smooth;scroll-padding-top:24px}body{background:var(--paper)
 @media(max-width:480px){.hero-actions{gap:20px}.hero-image figcaption{align-items:start;flex-direction:column}.how-grid{grid-template-columns:1fr}.how-number{margin-bottom:14px}.boxie-section{grid-template-columns:1fr;gap:24px;padding-block:30px}.boxie-section>img{max-width:200px;margin:auto}.panel{padding:18px}.app-shell{padding-inline:4%;padding-top:28px}.workspace-heading{flex-wrap:wrap}.feature-strip{flex-direction:column;align-items:center;gap:10px}.step-tab{padding-inline:4px}.step-tab .t{font-size:.8125rem}.site-footer{align-items:start;flex-direction:column;gap:14px}.site-footer p{margin:0}.print-page>.no-print:first-child{gap:14px;flex-wrap:wrap}.search-results button{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}}
 @media print{body{background:white}.print-page{max-width:none;padding:0}.print-marker{width:100mm;height:100mm;max-width:none;margin:0 auto}.print-caption{color:black}main{outline:none}.skip-link{display:none}}
+
+.storage-orientation { margin-block: 14px; }
+.storage-orientation label { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.storage-orientation input[type="checkbox"] { flex: 0 0 auto; width: 20px; height: 20px; min-height: 0; margin: 1px 0 0; accent-color: var(--copper); }
+.storage-orientation p { margin: 6px 0 0 30px; font-size: 14px; line-height: 1.5; color: var(--slate); }

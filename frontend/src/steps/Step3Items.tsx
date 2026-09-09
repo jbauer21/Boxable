@@ -1,3 +1,4 @@
+import { StorageOrientation } from "../components/StorageOrientation";
 import { useMemo, useRef, useState } from "react";
 import { EditableName } from "../components/EditableName";
 import {
@@ -249,6 +250,7 @@ export function Step3Items({ groups, onChange, onBack, onContinue }: Props) {
                 </>
               )}
             </div>
+            <StorageOrientation group={group} onChange={next => update(group.id, next)} />
             <div className="group-card-actions">
               <button className="btn secondary" type="button" onClick={() => duplicate(group.id)}>
                 Duplicate

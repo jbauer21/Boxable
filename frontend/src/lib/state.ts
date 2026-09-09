@@ -4,7 +4,7 @@ import type { Point } from "./types";
 
 export type WizardStep = 1 | 2 | 3 | 4;
 
-export type ItemGroup =
+export type ItemGroup = { storageOrientation?: "flat" | "vertical" } & (
   | {
       id: string;
       mode: "standard";
@@ -28,7 +28,7 @@ export type ItemGroup =
       lengthMm: number;
       widthMm: number;
       heightMm: number;
-    };
+    });
 
 export interface DrawerState {
   widthMm: number;
