@@ -221,7 +221,7 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
           />
         </div>
         <button className="btn" type="button" disabled={!canContinue} onClick={onContinue}>
-          Continue to grid
+          Continue to Place
         </button>
       </div>
     </section>

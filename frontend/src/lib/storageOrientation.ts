@@ -34,7 +34,16 @@ export function orientedGroupSpecs(group: ItemGroup, maxHeightU: number, maxFoot
     return pocketHolders(group.name, shape.round ? 'cyl_pockets' : 'rect_pockets', count,
       (shape.round ? shape.dims[0] : middle) + shape.clearance,
       (shape.round ? shape.dims[1] : thin) + shape.clearance,
-      pocketDepthForUpright(extent), maxHeightU, cap);
+      pocketDepthForUpright(extent), maxHeightU, cap).filter(s => s.height_u * 7 - s.pocket_depth_mm + extent <= maxHeightU * 7);
+  }
+  const obj = group.mode === 'catalog' ? getCatalogObject(group.objectId) : null;
+  const needsCompartments = group.mode === 'standard' || (obj && (['cylindrical_pockets', 'hex_pockets', 'rectangular_pockets'].includes(obj.generation.backend_generator) || obj.generation.sizing_mode === 'generic_divisions'));
+  if (needsCompartments) {
+    const extent = shape.round ? shape.dims[0] : thin;
+    return pocketHolders(group.name, 'rect_pockets', count,
+      (shape.round ? shape.dims[2] : long) + shape.clearance,
+      (shape.round ? shape.dims[0] : middle) + shape.clearance,
+      extent, maxHeightU, cap).filter(s => s.pocket_depth_mm >= extent);
   }
   // One layer of whole items in a shared open bin. Discrete capacity avoids
   // volume-only estimates that can claim several long objects fit when they cannot.
