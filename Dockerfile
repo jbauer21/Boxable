@@ -3,6 +3,7 @@ WORKDIR /build/frontend
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
+COPY boxable_object_catalog.json /build/boxable_object_catalog.json
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_PUBLISHABLE_KEY
 ENV VITE_GOOGLE_AUTH_BACKEND=true
