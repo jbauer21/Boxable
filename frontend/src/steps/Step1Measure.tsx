@@ -1,3 +1,4 @@
+import { validatePhoto } from '../accounts/client';
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { measureImage, refineMarkers } from "../api";
@@ -17,10 +18,15 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
   const [showAutoAdjust, setShowAutoAdjust] = useState(false);
   const [error, setError] = useState("");
   const [hot, setHot] = useState(false);
+  const active = useRef(true);
+  const uploadSequence = useRef(0);
+  useEffect(() => { active.current = true; return () => { active.current = false; uploadSequence.current++; }; }, []);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const applyFile = useCallback(
     async (file: File) => {
+      try { validatePhoto(file); } catch (error) { setError(error instanceof Error ? error.message : "Invalid photo"); return; }
+      const sequence = ++uploadSequence.current;
       setBusy(true);
       setError("");
       setShowAutoAdjust(false);
@@ -47,6 +53,7 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
           // Keep measure results if snap-to-edge refine fails.
         }
 
+        if (!active.current || sequence !== uploadSequence.current) { URL.revokeObjectURL(url); return; }
         const live = measureDrawer(topLeft, bottomRight);
         onChange((prev) => ({
           ...prev,
@@ -65,7 +72,7 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
         URL.revokeObjectURL(url);
         setError(err instanceof Error ? err.message : "Upload failed");
       } finally {
-        setBusy(false);
+        if (active.current && sequence === uploadSequence.current) setBusy(false);
       }
     },
     [onChange],
@@ -88,6 +95,7 @@ export function Step1Measure({ drawer, onChange, onContinue }: Props) {
       const result = await refineMarkers(drawer.photoFile, drawer.topLeft, drawer.bottomRight);
       const topLeft = result.markers.topLeft ?? drawer.topLeft;
       const bottomRight = result.markers.bottomRight ?? drawer.bottomRight;
+      if (!active.current) return;
       const live = topLeft && bottomRight ? measureDrawer(topLeft, bottomRight) : null;
       onChange((prev) => ({
         ...prev,

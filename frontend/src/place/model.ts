@@ -59,7 +59,12 @@ export function reconcile(specs: ContainerSpec[], previous: Layout, cols: number
     if(p&&validPlacement(p,placed,cols,rows)) placed.push(p); else pending.push(spec);
   }
   const unplaced: ContainerSpec[]=[];
-  for (const spec of pending) { const p=findSpace(spec,placed,cols,rows); if(p)placed.push(p);else unplaced.push(spec); }
+  const keptUnplaced=new Set(previous.unplaced.map(s=>s.id));
+  for (const spec of pending) {
+    // Preserve intentional overflow so reopening a saved drawer does not silently auto-place waiting bins.
+    if(keptUnplaced.has(spec.id)){unplaced.push(spec);continue;}
+    const p=findSpace(spec,placed,cols,rows); if(p)placed.push(p);else unplaced.push(spec);
+  }
   return {placed,unplaced};
 }
 function score(l: Layout) {

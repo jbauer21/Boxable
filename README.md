@@ -54,8 +54,8 @@ cd frontend && npm test
 
 The home page introduces the drawer workflow and uses the existing Boxie and drawer
 brand artwork. Open `#/planner` for the four-step studio or `#/markers` for the
-printable markers. Drawer and item state stays in memory while navigating between
-these pages; reloading starts a fresh session, as before.
+printable markers. Guest drawers recover locally across reloads. With a configured account, drawer plans
+and photos autosave privately to Supabase and can be reopened in My drawers.
 
 The refresh preserves the FastAPI backend, catalog, sizing and packing algorithms,
 API contracts, marker SVGs, three.js preview, and 3MF generation. Production hosting
@@ -64,3 +64,16 @@ photos or generate geometry. Brand imagery is illustrative, not a generated prin
 
 Validation: frontend TypeScript/production build and all 66 existing frontend tests.
 Browser interaction checks and backend integration tests were not run for this UI change.
+
+## Accounts and private drawers
+
+Google and email/name/password accounts, verification and recovery, private photos,
+named drawers, and conflict-aware autosave are implemented. Follow [account setup](docs/ACCOUNTS.md)
+to connect the Supabase project, apply the migration, and configure Google and email delivery.
+Use Node.js 24; the root `npm run dev` launcher also finds the bundled runtime on this Mac.
+
+## Render deployment
+
+The root Dockerfile serves the built frontend at `/` and FastAPI at `/api` from
+one free Render web service. Follow [deployment setup](docs/DEPLOYMENT.md) for the
+Google callback, Brevo SMTP variables, provider setup and verification steps.

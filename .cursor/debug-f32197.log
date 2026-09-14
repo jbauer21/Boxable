@@ -265,3 +265,4 @@
 {"sessionId": "f32197", "runId": "post-fix", "hypothesisId": "A,B,C", "location": "main.py:debug_requests:entry", "message": "Request entered event loop", "data": {"method": "POST", "path": "/generate", "thread": 8481851456}, "timestamp": 1788803796476}
 {"sessionId": "f32197", "runId": "post-fix", "hypothesisId": "A,B,C", "location": "main.py:debug_requests:exit", "message": "Request completed", "data": {"path": "/generate", "status": 200, "elapsedMs": 359.6, "thread": 8481851456}, "timestamp": 1788803796835}
 {"sessionId": "f32197", "runId": "post-fix", "hypothesisId": "D", "location": "main.py:shutdown", "message": "Backend graceful shutdown", "data": {"pid": 71254, "thread": 8481851456}, "timestamp": 1788803973392}
+{"sessionId": "f32197", "runId": "post-fix", "hypothesisId": "D", "location": "main.py:shutdown", "message": "Backend graceful shutdown", "data": {"pid": 59280, "thread": 8481851456}, "timestamp": 1789346283945}

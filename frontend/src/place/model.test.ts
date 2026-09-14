@@ -19,6 +19,13 @@ describe('editable Place layout',()=>{
   expect(next.placed.find(p=>p.spec.id==='a')).toMatchObject({col:4,row:3,rotated:true,spec:{height_u:6}});
   expect(next.placed).toHaveLength(2);
  });
+ it('restores waiting bins exactly instead of auto-placing them into free cells',()=>{
+  const a=bin('a'),b=bin('b');
+  const old={placed:[{spec:a,col:0,row:0,rotated:false}],unplaced:[b]};
+  const next=reconcile([a,b],old,10,8,9);
+  expect(next.placed).toEqual([{spec:a,col:0,row:0,rotated:false}]);
+  expect(next.unplaced.map(s=>s.id)).toEqual(['b']);
+ });
  it('removes deleted bins and repairs positions after shrinking a drawer',()=>{
   const a=bin('a'),b=bin('b');const previous={placed:[{spec:a,col:8,row:6,rotated:false},{spec:b,col:0,row:0,rotated:false}],unplaced:[]};
   const next=reconcile([a],previous,4,4,8);

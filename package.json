@@ -1,1 +1,7 @@
-{"name":"boxable-workspace","private":true,"scripts":{"dev":"node frontend/node_modules/vite/bin/vite.js frontend --config frontend/vite.config.ts"}}
+{
+  "name": "boxable-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "sh scripts/dev-local.sh"
+  }
+}

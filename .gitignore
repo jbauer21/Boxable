@@ -8,3 +8,7 @@ __pycache__/
 frontend/coverage/
 *.egg-info/
 .vite/
+
+.env
+.env.*
+!.env.example

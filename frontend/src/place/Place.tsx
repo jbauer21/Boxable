@@ -1,5 +1,5 @@
 import { StorageOrientation } from "../components/StorageOrientation";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction, type CSSProperties } from 'react';
 import { categoryDisplayName, getCatalogObject, quantityLabel, searchCatalog } from '../lib/catalog';
 import { cloneGroup, newCatalogGroup, newCustomGroup, type DrawerState, type ItemGroup } from '../lib/state';
 import { placedCols, placedRows, type ContainerSpec, type PlacedContainer } from '../lib/types';
@@ -10,7 +10,7 @@ import { arrange, colorFor, downloadJSON, groupId, minHeight, reconcile, specsFo
 import { Plan3D } from './Plan3D';
 import './place.css';
 
-interface Props { drawer: DrawerState; groups: ItemGroup[]; onChange:(g:ItemGroup[])=>void; onMeasure:()=>void }
+interface Props { drawer: DrawerState; groups: ItemGroup[]; onChange:(g:ItemGroup[])=>void; onMeasure:()=>void; layout:Layout; setLayout:Dispatch<SetStateAction<Layout>>; usableHeightMm:number; setUsableHeightMm:(value:number)=>void }
 function NumberField({value,min=1,max=999,onChange,label}:{value:number;min?:number;max?:number;onChange:(n:number)=>void;label:string}){
   const [draft,setDraft]=useState(String(value));useEffect(()=>setDraft(String(value)),[value]);
   return <label className="place-field">{label}<input type="number" min={min} max={max} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={()=>{const n=Number(draft);if(Number.isFinite(n)&&n>=min&&n<=max)onChange(Math.round(n));else setDraft(String(value));}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>;
@@ -26,11 +26,9 @@ function PocketPattern({s}:{s:ContainerSpec}){
     {s.kind==='bin'?<>{Array.from({length:Math.max(0,s.length_div-1)},(_,i)=><path key={'x'+i} d={`M ${w*(i+1)/s.length_div} 4 V ${h-4}`}/>)}{Array.from({length:Math.max(0,s.width_div-1)},(_,i)=><path key={'y'+i} d={`M 4 ${h*(i+1)/s.width_div} H ${w-4}`}/>)}</>:s.kind==='spool'?<><circle cx={w/2} cy={h/2} r={Math.min(w,h)*.38}/><circle cx={w/2} cy={h/2} r={Math.min(w,h)*.15}/></>:Array.from({length:Math.min(200,s.pocket_rows*s.pocket_cols)},(_,i)=>{const x=3+(w-6)*((i%s.pocket_cols)+.5)/s.pocket_cols,y=3+(h-6)*(Math.floor(i/s.pocket_cols)+.5)/s.pocket_rows;return s.kind==='rect_pockets'?<rect key={i} x={x-s.pocket_length_mm/2} y={y-s.pocket_width_mm/2} width={s.pocket_length_mm} height={s.pocket_width_mm} rx="1"/>:<circle key={i} cx={x} cy={y} r={s.pocket_diam_mm/2}/>;})}
   </svg>;
 }
-export function Place({drawer,groups,onChange,onMeasure}:Props){
+export function Place({drawer,groups,onChange,onMeasure,layout,setLayout,usableHeightMm,setUsableHeightMm}:Props){
   const grid=useMemo(()=>fitGrid(drawer.widthMm,drawer.heightMm),[drawer.widthMm,drawer.heightMm]);
-  const [usableHeightMm,setUsableHeightMm]=useState(drawer.depthMm||50);
   const generated=useMemo(()=>specsForGroups(groups,usableHeightMm,grid.cols,grid.rows),[groups,usableHeightMm,grid.cols,grid.rows]);
-  const [layout,setLayout]=useState<Layout>(()=>arrange(generated.specs,grid.cols,grid.rows));
   const [history,setHistory]=useState<Layout[]>([]),[future,setFuture]=useState<Layout[]>([]);
   const [selected,setSelected]=useState(''),[selectedGroup,setSelectedGroup]=useState(groups[0]?.id??'');
   const [query,setQuery]=useState(''),[highlight,setHighlight]=useState(0),[view,setView]=useState<'2d'|'3d'>('3d');
@@ -39,7 +37,6 @@ export function Place({drawer,groups,onChange,onMeasure}:Props){
   const [ghost,setGhost]=useState<PlacedContainer|null>(null),[dragging,setDragging]=useState(false);
   const board=useRef<HTMLDivElement>(null),search=useRef<HTMLInputElement>(null);
   const drag=useRef<{p:PlacedContainer;x:number;y:number;cellX:number;cellY:number;candidate:PlacedContainer}|null>(null);
-  useEffect(()=>{if(drawer.depthMm>0)setUsableHeightMm(drawer.depthMm);},[drawer.depthMm]);
   useEffect(()=>{setLayout(old=>reconcile(generated.specs,old,grid.cols,grid.rows,generated.maxHeight,generated.heightLimits));setHistory([]);setFuture([]);},[generated,grid.cols,grid.rows]);
   useEffect(()=>{if(!groups.some(g=>g.id===selectedGroup))setSelectedGroup(groups[0]?.id??'');},[groups,selectedGroup]);
   const allSpecs=[...layout.placed.map(p=>p.spec),...layout.unplaced];
@@ -101,7 +98,7 @@ export function Place({drawer,groups,onChange,onMeasure}:Props){
           {!layout.placed.length&&<div className="place-board-empty">Your drawer starts here.<br/><span>Add an object to see its bin.</span></div>}
         </div><div className="place-front">FRONT OF DRAWER <span>↓</span></div></div></div>:<Plan3D placed={layout.placed} cols={grid.cols} rows={grid.rows} selected={selected} onSelect={choose} drawerWidth={drawer.widthMm} drawerLength={drawer.heightMm} drawerHeight={usableHeightMm}/>}
       </div>
-      <div className="place-bottom-actions"><button type="button" className="place-button" onClick={save} disabled={!!generated.invalidNames.length}>Save layout</button><button type="button" className="place-primary" onClick={()=>void export3mf()} disabled={busy||!layout.placed.length||!!layout.unplaced.length||!!generated.skipped.length||!!generated.invalidNames.length}>{busy?'Building…':'Download 3MF'} <span aria-hidden="true">↓</span></button></div>
+      <div className="place-bottom-actions"><button type="button" className="place-button" onClick={save} disabled={!!generated.invalidNames.length}>Export JSON</button><button type="button" className="place-primary" onClick={()=>void export3mf()} disabled={busy||!layout.placed.length||!!layout.unplaced.length||!!generated.skipped.length||!!generated.invalidNames.length}>{busy?'Building…':'Download 3MF'} <span aria-hidden="true">↓</span></button></div>
     </section>
   </div>;
 }
