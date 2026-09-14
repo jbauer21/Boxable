@@ -8,10 +8,9 @@ export interface Layout { placed: PlacedContainer[]; unplaced: ContainerSpec[] }
 export const COLORS = ['#c6b6ff', '#c2f24a', '#ffb5c7', '#a8d9f0', '#f7d58b', '#b2dec7'];
 export const groupId = (id: string) => id.split(':')[0];
 export const colorFor = (id: string) => COLORS[[...groupId(id)].reduce((n,c) => n+c.charCodeAt(0),0)%COLORS.length];
-export const ROOF_CLEARANCE_MM = 10;
 export const BASE_ALLOWANCE_MM = 5;
 export function specsForGroups(groups: ItemGroup[], depth: number, cols: number, rows: number) {
-  const maxHeight = Math.min(20, Math.floor((depth - BASE_ALLOWANCE_MM - ROOF_CLEARANCE_MM) / 7));
+  const maxHeight = Math.min(20, Math.floor((depth - BASE_ALLOWANCE_MM) / 7));
   const maxFootprint = Math.max(1, Math.min(6, Math.max(cols, rows)));
   const specs: ContainerSpec[] = [], skipped: string[] = [];
   const heightLimits: Record<string,number> = {};

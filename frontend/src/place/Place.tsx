@@ -1,6 +1,6 @@
 import { StorageOrientation } from "../components/StorageOrientation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { CATALOG_OBJECTS, categoryDisplayName, getCatalogObject, quantityLabel, searchCatalog } from '../lib/catalog';
+import { categoryDisplayName, getCatalogObject, quantityLabel, searchCatalog } from '../lib/catalog';
 import { cloneGroup, newCatalogGroup, newCustomGroup, type DrawerState, type ItemGroup } from '../lib/state';
 import { placedCols, placedRows, type ContainerSpec, type PlacedContainer } from '../lib/types';
 import { fitGrid } from '../lib/gridLayout';
@@ -15,6 +15,11 @@ function NumberField({value,min=1,max=999,onChange,label}:{value:number;min?:num
   const [draft,setDraft]=useState(String(value));useEffect(()=>setDraft(String(value)),[value]);
   return <label className="place-field">{label}<input type="number" min={min} max={max} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={()=>{const n=Number(draft);if(Number.isFinite(n)&&n>=min&&n<=max)onChange(Math.round(n));else setDraft(String(value));}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>;
 }
+function ToolNumberField({value,min,max,step=1,onChange,label,unit,hint}:{value:number;min:number;max:number;step?:number;onChange:(n:number)=>void;label:string;unit:string;hint:string}){
+  const [draft,setDraft]=useState(String(value));useEffect(()=>setDraft(String(value)),[value]);
+  const commit=()=>{const n=Number(draft);if(!Number.isFinite(n)){setDraft(String(value));return;}const snapped=Math.round(n/step)*step;const next=Math.min(max,Math.max(min,Math.round(snapped*1000)/1000));onChange(next);setDraft(String(next));};
+  return <label className="place-tool-field">{label}<input type="number" min={min} max={max} step={step} value={draft} aria-describedby={hint} onChange={e=>setDraft(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/><span id={hint}>{unit}</span></label>;
+}
 function PocketPattern({s}:{s:ContainerSpec}){
   const w=s.length_u*42,h=s.width_u*42;
   return <svg className="place-pattern" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
@@ -23,7 +28,8 @@ function PocketPattern({s}:{s:ContainerSpec}){
 }
 export function Place({drawer,groups,onChange,onMeasure}:Props){
   const grid=useMemo(()=>fitGrid(drawer.widthMm,drawer.heightMm),[drawer.widthMm,drawer.heightMm]);
-  const generated=useMemo(()=>specsForGroups(groups,drawer.depthMm,grid.cols,grid.rows),[groups,drawer.depthMm,grid.cols,grid.rows]);
+  const [usableHeightMm,setUsableHeightMm]=useState(drawer.depthMm||50);
+  const generated=useMemo(()=>specsForGroups(groups,usableHeightMm,grid.cols,grid.rows),[groups,usableHeightMm,grid.cols,grid.rows]);
   const [layout,setLayout]=useState<Layout>(()=>arrange(generated.specs,grid.cols,grid.rows));
   const [history,setHistory]=useState<Layout[]>([]),[future,setFuture]=useState<Layout[]>([]);
   const [selected,setSelected]=useState(''),[selectedGroup,setSelectedGroup]=useState(groups[0]?.id??'');
@@ -33,6 +39,7 @@ export function Place({drawer,groups,onChange,onMeasure}:Props){
   const [ghost,setGhost]=useState<PlacedContainer|null>(null),[dragging,setDragging]=useState(false);
   const board=useRef<HTMLDivElement>(null),search=useRef<HTMLInputElement>(null);
   const drag=useRef<{p:PlacedContainer;x:number;y:number;cellX:number;cellY:number;candidate:PlacedContainer}|null>(null);
+  useEffect(()=>{if(drawer.depthMm>0)setUsableHeightMm(drawer.depthMm);},[drawer.depthMm]);
   useEffect(()=>{setLayout(old=>reconcile(generated.specs,old,grid.cols,grid.rows,generated.maxHeight,generated.heightLimits));setHistory([]);setFuture([]);},[generated,grid.cols,grid.rows]);
   useEffect(()=>{if(!groups.some(g=>g.id===selectedGroup))setSelectedGroup(groups[0]?.id??'');},[groups,selectedGroup]);
   const allSpecs=[...layout.placed.map(p=>p.spec),...layout.unplaced];
@@ -51,7 +58,7 @@ export function Place({drawer,groups,onChange,onMeasure}:Props){
   const auto=()=>{const next=arrange(allSpecs,grid.cols,grid.rows,layout);commit(next,next.unplaced.length?`Best layout found: ${next.unplaced.length} bins still need space.`:'Auto arranged. Undo brings back your manual layout.');};
   const total=grid.cols*grid.rows;
   const export3mf=async()=>{if(!layout.placed.length||layout.unplaced.length||generated.skipped.length||generated.invalidNames.length)return;setBusy(true);try{const blob=await download3mf(layout.placed,tileBaseplates(grid.cols,grid.rows));const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='boxable.3mf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setMessage('3MF downloaded. Check total height and fit in your slicer.');}catch(e){setMessage(e instanceof Error?`3MF could not be built. ${e.message}`:'3MF could not be built.');}finally{setBusy(false);}};
-  const save=()=>{if(generated.invalidNames.length)return;downloadJSON({version:1,drawer:{widthMm:drawer.widthMm,heightMm:drawer.heightMm,depthMm:drawer.depthMm},groups,items:layout.placed,unplaced:layout.unplaced,baseplates:tileBaseplates(grid.cols,grid.rows)});setMessage('Drawer plan saved, including positions, rotation, and height.');};
+  const save=()=>{if(generated.invalidNames.length)return;downloadJSON({version:1,drawer:{widthMm:drawer.widthMm,heightMm:drawer.heightMm,depthMm:usableHeightMm},groups,items:layout.placed,unplaced:layout.unplaced,baseplates:tileBaseplates(grid.cols,grid.rows)});setMessage('Drawer plan saved, including positions, rotation, and height.');};
   if(!total)return <section className="panel"><h2>Start with your drawer.</h2><p>Enter dimensions that fit at least one 42 × 42 mm cell.</p><button className="btn" onClick={onMeasure}>Measure drawer</button></section>;
   return <div className="place-workspace">
     <div className="place-mobile-bar"><button type="button" className="place-button" onClick={()=>setMobileItems(!mobileItems)}>{mobileItems?'Hide':'Add / edit'} things · {groups.length}</button><span>{layout.placed.length} bins placed</span></div>
@@ -72,12 +79,11 @@ export function Place({drawer,groups,onChange,onMeasure}:Props){
           <div className="place-group-actions"><button type="button" onClick={()=>{const copy=cloneGroup(g);onChange([...groups,copy]);setSelectedGroup(copy.id);setSelected('');}}>Duplicate</button><button type="button" onClick={()=>{onChange(groups.filter(x=>x.id!==g.id));setMessage(`${g.name} removed.`);}}>Remove</button></div>
         </div>}
       </div>})}</div>
-      <div className="place-catalog-note">{CATALOG_OBJECTS.length} objects in the catalog.<br/>Check estimated sizes against your things.</div>
     </aside>
     <section className="place-plan" aria-label="Print plan">
       <div className="place-plan-header"><div><p className="place-kicker">02 / YOUR DRAWER</p><h2>Everything in its place.</h2></div><button type="button" className="place-auto" disabled={!allSpecs.length} onClick={auto}>Auto arrange <span aria-hidden="true">↗</span></button></div>
-      <div className="place-tools"><div className="place-view-switch" role="group" aria-label="Plan view"><button type="button" aria-pressed={view==='2d'} onClick={()=>setView('2d')}>Top view</button><button type="button" aria-pressed={view==='3d'} onClick={()=>setView('3d')}>3D preview</button></div><div className="place-tool-actions"><button type="button" className="place-button" aria-label="Undo layout change" disabled={!history.length} onClick={undo}>↶ Undo</button><button type="button" className="place-button" aria-label="Redo layout change" disabled={!future.length} onClick={redo}>↷</button>{view==='2d'&&<><button type="button" className="place-button" aria-label="Zoom out" disabled={zoom<=75} onClick={()=>setZoom(z=>z-25)}>−</button><button type="button" className="place-button place-zoom" onClick={()=>setZoom(100)} aria-label="Fit drawer to view">{zoom}%</button><button type="button" className="place-button" aria-label="Zoom in" disabled={zoom>=200} onClick={()=>setZoom(z=>z+25)}>+</button></>}</div></div>
-      {(generated.skipped.length>0||layout.unplaced.length>0)&&<div className="place-warning" role="status">{generated.skipped.length>0&&<span>Doesn’t fit with 1 cm of roof clearance: {generated.skipped.join(', ')}. Try Horizontal, fewer objects, or check your measurements. </span>}{layout.unplaced.length>0&&<span>{layout.unplaced.length} bins need space. Try Auto arrange, reduce quantities, or change drawers.</span>}</div>}
+      <div className="place-tools"><div className="place-tools-start"><div className="place-view-switch" role="group" aria-label="Plan view"><button type="button" aria-pressed={view==='2d'} onClick={()=>setView('2d')}>Top view</button><button type="button" aria-pressed={view==='3d'} onClick={()=>setView('3d')}>3D preview</button></div><div className="place-height-fields"><ToolNumberField label="Usable height" value={usableHeightMm} min={20} max={500} onChange={setUsableHeightMm} unit="mm" hint="place-usable-help"/></div></div><div className="place-tool-actions"><button type="button" className="place-button" aria-label="Undo layout change" disabled={!history.length} onClick={undo}>↶ Undo</button><button type="button" className="place-button" aria-label="Redo layout change" disabled={!future.length} onClick={redo}>↷</button>{view==='2d'&&<><button type="button" className="place-button" aria-label="Zoom out" disabled={zoom<=75} onClick={()=>setZoom(z=>z-25)}>−</button><button type="button" className="place-button place-zoom" onClick={()=>setZoom(100)} aria-label="Fit drawer to view">{zoom}%</button><button type="button" className="place-button" aria-label="Zoom in" disabled={zoom>=200} onClick={()=>setZoom(z=>z+25)}>+</button></>}</div></div>
+      {(generated.skipped.length>0||layout.unplaced.length>0)&&<div className="place-warning" role="status">{generated.skipped.length>0&&<span>Doesn’t fit in the drawer height: {generated.skipped.join(', ')}. Try Horizontal, fewer objects, or check your measurements. </span>}{layout.unplaced.length>0&&<span>{layout.unplaced.length} bins need space. Try Auto arrange, reduce quantities, or change drawers.</span>}</div>}
       {!!layout.unplaced.length&&<div className="place-unplaced"><strong>Waiting for space</strong>{layout.unplaced.map(s=><button type="button" className="place-button" key={s.id} onClick={()=>choose(s.id)}>{s.name} · {s.length_u}×{s.width_u}</button>)}</div>}
       <div className={message.startsWith('3MF could not be built')?'place-warning':'place-sr-only'} role="status" aria-live="polite">{message}</div>
       <div className="place-canvas-wrap" title={view==='2d'?'Drag to move · R to rotate · Arrow keys to nudge':'Drag to orbit · Scroll to zoom · Click a bin to select'}>
@@ -93,7 +99,7 @@ export function Place({drawer,groups,onChange,onMeasure}:Props){
           </button>)}
           {ghost&&<div className={`place-drag-ghost ${validPlacement(ghost,layout.placed,grid.cols,grid.rows)?'valid':'invalid'}`} style={{left:`${ghost.col/grid.cols*100}%`,top:`${ghost.row/grid.rows*100}%`,width:`${placedCols(ghost)/grid.cols*100}%`,height:`${placedRows(ghost)/grid.rows*100}%`}}>{validPlacement(ghost,layout.placed,grid.cols,grid.rows)?'Place here':'Blocked'}</div>}
           {!layout.placed.length&&<div className="place-board-empty">Your drawer starts here.<br/><span>Add an object to see its bin.</span></div>}
-        </div><div className="place-front">FRONT OF DRAWER <span>↓</span></div></div></div>:<Plan3D placed={layout.placed} cols={grid.cols} rows={grid.rows} selected={selected} onSelect={choose} drawerWidth={drawer.widthMm} drawerLength={drawer.heightMm} drawerHeight={drawer.depthMm}/>}
+        </div><div className="place-front">FRONT OF DRAWER <span>↓</span></div></div></div>:<Plan3D placed={layout.placed} cols={grid.cols} rows={grid.rows} selected={selected} onSelect={choose} drawerWidth={drawer.widthMm} drawerLength={drawer.heightMm} drawerHeight={usableHeightMm}/>}
       </div>
       <div className="place-bottom-actions"><button type="button" className="place-button" onClick={save} disabled={!!generated.invalidNames.length}>Save layout</button><button type="button" className="place-primary" onClick={()=>void export3mf()} disabled={busy||!layout.placed.length||!!layout.unplaced.length||!!generated.skipped.length||!!generated.invalidNames.length}>{busy?'Building…':'Download 3MF'} <span aria-hidden="true">↓</span></button></div>
     </section>

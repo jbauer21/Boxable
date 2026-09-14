@@ -40,9 +40,8 @@ export function Plan3D({placed,cols,rows,selected,onSelect,drawerWidth,drawerLen
     wall(1,drawerHeight,drawerLength,w+mx,drawerHeight/2,h/2);
     wallMat.dispose();
     const line=(points:number[],color:string)=>{const geom=new THREE.BufferGeometry();geom.setAttribute('position',new THREE.Float32BufferAttribute(points,3));a.floor.add(new THREE.LineSegments(geom,new THREE.LineBasicMaterial({color})));};
-    for(const [y,color] of [[drawerHeight,'#655975'],[drawerHeight-10,'#aa7525']] as const){line([-mx,y,-mz,w+mx,y,-mz,w+mx,y,-mz,w+mx,y,h+mz,w+mx,y,h+mz,-mx,y,h+mz,-mx,y,h+mz,-mx,y,-mz],color);}
+    line([-mx,drawerHeight,-mz,w+mx,drawerHeight,-mz,w+mx,drawerHeight,-mz,w+mx,drawerHeight,h+mz,w+mx,drawerHeight,h+mz,-mx,drawerHeight,h+mz,-mx,drawerHeight,h+mz,-mx,drawerHeight,-mz],'#655975');
     line([w+mx+12,0,h+mz,w+mx+12,drawerHeight,h+mz,w+mx+6,0,h+mz,w+mx+18,0,h+mz,w+mx+6,drawerHeight,h+mz,w+mx+18,drawerHeight,h+mz],'#655975');
-    const band=new THREE.Mesh(new THREE.BoxGeometry(drawerWidth,10,drawerLength),new THREE.MeshBasicMaterial({color:'#efbc62',transparent:true,opacity:.07,depthWrite:false}));band.position.set(w/2,drawerHeight-5,h/2);a.floor.add(band);
     const bottom=new THREE.Mesh(new THREE.BoxGeometry(w,3,h),new THREE.MeshStandardMaterial({color:'#dedbd3',roughness:1}));bottom.position.set(w/2,-3,h/2);a.floor.add(bottom);
     const pts:number[]=[];for(let c=0;c<=cols;c++)pts.push(c*42,0,0,c*42,0,h);for(let r=0;r<=rows;r++)pts.push(0,0,r*42,w,0,r*42);
     const geom=new THREE.BufferGeometry();geom.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));a.floor.add(new THREE.LineSegments(geom,new THREE.LineBasicMaterial({color:'#aaa59b'})));

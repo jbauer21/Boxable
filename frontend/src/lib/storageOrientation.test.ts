@@ -49,27 +49,27 @@ describe('storage orientation', () => {
   });
 });
 
-describe('drawer roof clearance', () => {
-  it('reserves 10 mm above the assembled container and refuses truncated horizontal objects', () => {
+describe('drawer height limits', () => {
+  it('keeps assembled containers within the drawer depth and refuses truncated horizontal objects', () => {
     const g = glue('flat');
     for (const depth of [20, 30, 50, 80, 150]) {
       const result = specsForGroups([g],depth,12,12);
-      result.specs.forEach(s=>expect(s.height_u*7+5).toBeLessThanOrEqual(depth-10));
+      result.specs.forEach(s=>expect(s.height_u*7+5).toBeLessThanOrEqual(depth));
     }
     expect(specsForGroup(g,2,6)).toEqual([]);
   });
   it('checks the seated upright object, not just holder height', () => {
     const g = {...newStandardGroup('batteryAA'),storageOrientation:'vertical' as const};
-    expect(specsForGroups([g],70,10,10).specs).toEqual([]);
+    expect(specsForGroups([g],55,10,10).specs).toEqual([]);
     const result=specsForGroups([g],90,10,10);
     expect(result.specs.length).toBeGreaterThan(0);
-    result.specs.forEach(s=>expect(s.height_u*7-s.pocket_depth_mm+50.5+5).toBeLessThanOrEqual(80));
+    result.specs.forEach(s=>expect(s.height_u*7-s.pocket_depth_mm+50.5+5).toBeLessThanOrEqual(90));
   });
-  it('limits manual holder height so protruding objects remain below the safe limit', () => {
+  it('limits manual holder height so protruding objects remain below the drawer ceiling', () => {
     const g={...newStandardGroup('batteryAA'),storageOrientation:'vertical' as const};
     const result=specsForGroups([g],90,10,10);
     const s=result.specs[0];
-    expect(result.heightLimits[s.id]*7-s.pocket_depth_mm+50.5+5).toBeLessThanOrEqual(80);
+    expect(result.heightLimits[s.id]*7-s.pocket_depth_mm+50.5+5).toBeLessThanOrEqual(90);
     const previous=arrange([{...s,height_u:20}],10,10);
     const fixed=reconcile(result.specs,previous,10,10,result.maxHeight,result.heightLimits);
     expect(fixed.placed[0].spec.height_u).toBeLessThanOrEqual(result.heightLimits[s.id]);

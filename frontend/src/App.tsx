@@ -35,7 +35,6 @@ export default function App() {
           <Step1Measure drawer={drawer} onChange={setDrawer} onContinue={()=>goStep(2)}/>
         </div>}
         <div hidden={step!==2}><Place drawer={drawer} groups={groups} onChange={setGroups} onMeasure={()=>goStep(1)}/></div>
-        <p className="place-app-footer">Made to fit your things. Built around a 42 mm grid.</p>
       </div>
 
     </main>
