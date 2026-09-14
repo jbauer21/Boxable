@@ -1,5 +1,7 @@
 # Boxable on Render Free
 
+Live service configuration: `srv-dak11o5g1s2s73cgp9c0`, URL `https://boxable.onrender.com`.
+
 Use the existing Boxable project and one **Web Service**, connected to
 `jbauer21/Boxable`, branch `main`, language **Docker**, plan **Free**.
 Leave root directory and Docker command empty. Dockerfile: `./Dockerfile`.
@@ -25,7 +27,7 @@ Set these in Render → Boxable service → Environment:
 | `GOOGLE_CLIENT_SECRET` | That OAuth client's secret; runtime only |
 | `SMTP_HOST` | `smtp-relay.brevo.com` |
 | `SMTP_PORT` | `2525` |
-| `SMTP_USERNAME` | Brevo → SMTP & API → SMTP login (not necessarily your account email) |
+| `SMTP_USERNAME` | `b958b3001@smtp-brevo.com` (Brevo SMTP login) |
 | `SMTP_PASSWORD` | Brevo SMTP key, not an API key or Gmail password |
 | `SMTP_SENDER_EMAIL` | Your verified Brevo sender; use `boxableorganization@gmail.com` only after Brevo verifies it |
 | `SMTP_SENDER_NAME` | `Boxable` |
@@ -38,15 +40,15 @@ prevent guest planning, measurement or exports from starting.
 
 ## Google OAuth setup
 
-Use `boxableorganization@gmail.com` in Google Cloud. Create a project and configure
+Use `boxableorganization@gmail.com` in Google Cloud. Project **Boxable** (`autonomous-key-508615-e3`) has been created. Configure
 Google Auth Platform with app name **Boxable**, that support/contact email, and an
 external audience. In testing, add the accounts that will sign in as test users.
 Create an OAuth client of type **Web application**.
 
-Once Render assigns `https://YOUR-SERVICE.onrender.com`, enter:
+Render assigned `https://boxable.onrender.com`. Enter:
 
-- Authorized JavaScript origin: `https://YOUR-SERVICE.onrender.com`
-- Authorized redirect URI: `https://YOUR-SERVICE.onrender.com/auth/google/callback`
+- Authorized JavaScript origin: `https://boxable.onrender.com`
+- Authorized redirect URI: `https://boxable.onrender.com/auth/google/callback`
 - For the existing local Supabase OAuth flow, also allow
   `https://dlnyuqnwmojzleejussf.supabase.co/auth/v1/callback`.
 
@@ -106,3 +108,14 @@ after deployment; do not silently change the plan to paid if a workload exceeds 
 Local: 157 frontend tests, production build, 51 backend regressions, and four
 production-routing/OAuth/SMTP tests pass. Live OAuth, SMTP delivery and private
 drawers require provider credentials/configuration and acceptance checks.
+
+## Verified deployment
+
+Render deployment `dep-dak13he7bikc73brlkb0` succeeded with commit `41aa717`
+on September 14, 2026. The live homepage and `/api/health` returned 200. A synthetic
+450 × 300 mm drawer measured correctly through `/api/measure`. A 1 × 1 × 3 unit bin
+returned a 3D preview and a valid 3MF archive through the production API. Unknown
+API routes returned 404. Larger CAD workloads were not load-tested on the free tier.
+Brevo Free is active and the Boxable Gmail sender is verified; SMTP inbox delivery
+remains unverified. Google branding is configured; credential entry and Supabase
+provider configuration remain necessary before Google sign-in can be marked ready.

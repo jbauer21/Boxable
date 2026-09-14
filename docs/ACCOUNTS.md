@@ -10,7 +10,7 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill `VITE_SUPABASE_PU
 
 ## Supabase setup
 
-1. Apply `supabase/migrations/202609140001_accounts.sql` once to project **dlnyuqnwmojzleejussf** using the SQL Editor, or `SUPABASE_DB_PASSWORD='…' sh scripts/apply-accounts-migration.sh`. It creates profiles, drawers, revision handling, a private 10 MB photo bucket, and ownership policies in one transaction. It does not replace existing application data. Review existing tables/policies before applying; object-name collisions cause rollback rather than silently replacing them.
+1. Apply `supabase/migrations/202609140001_accounts.sql` once to project **dlnyuqnwmojzleejussf** using the SQL Editor, or `bash scripts/apply-accounts-migration.sh` after setting `SUPABASE_DB_HOST`, `SUPABASE_DB_USER`, and `SUPABASE_DB_PASSWORD` from the project’s Connect dialog. It creates profiles, drawers, revision handling, a private 10 MB photo bucket, and ownership policies in one transaction. It does not replace existing application data. Review existing tables/policies before applying; object-name collisions cause rollback rather than silently replacing them.
 2. Authentication → Providers: keep **Confirm email** enabled and anonymous sign-ins disabled. Keep Email enabled. Set minimum password length to **15**, leave composition restrictions unset, keep secure email change enabled, and enable secure password change. The 15-character minimum and secure password change were saved and verified in the hosted dashboard during implementation.
 3. Authentication → URL Configuration: use `http://localhost:5173/` as the local Site URL and explicitly allow `http://localhost:5173/`, `http://127.0.0.1:5173/`, and, if using the review server, `http://localhost:5174/` and `http://127.0.0.1:5174/`. Do not use wildcard redirects. Keep existing production URLs if the project already has them.
 4. Configure custom SMTP with a verified sender domain. Supabase's default email service is restricted and is not general-user delivery. Enter SMTP credentials directly in Supabase, never in frontend environment files or chat. Use the templates in `supabase/templates/`; they preserve Supabase's one-time confirmation URL. Leave email verification on even if SMTP is not yet available.
@@ -41,10 +41,10 @@ Frontend `.env.local` is configured for project **dlnyuqnwmojzleejussf** with th
 
 Still required before account storage is operational:
 
-1. **Apply the migration** once: paste `supabase/migrations/202609140001_accounts.sql` into the SQL Editor, or run `SUPABASE_DB_PASSWORD='…' sh scripts/apply-accounts-migration.sh`. Until this succeeds, `/rest/v1/drawers` and the `drawer-photos` bucket do not exist.
+1. **Apply the migration** once: paste `supabase/migrations/202609140001_accounts.sql` into the SQL Editor, or run `bash scripts/apply-accounts-migration.sh` after setting `SUPABASE_DB_HOST`, `SUPABASE_DB_USER`, and `SUPABASE_DB_PASSWORD` from the project’s Connect dialog. Until this succeeds, `/rest/v1/drawers` and the `drawer-photos` bucket do not exist.
 2. **Custom SMTP** with a verified sender (required for reliable confirmation/recovery mail). Leave verification enabled even while SMTP is unfinished. Current project responses show email send rate limiting, so mailer settings exist, but delivery must still be verified with a real inbox.
 3. **Google OAuth** provider credentials in Supabase (currently disabled on the project). Create the Google Cloud web client, set the redirect URI to `https://dlnyuqnwmojzleejussf.supabase.co/auth/v1/callback`, enter the client ID/secret in Supabase, and complete consent/test-user steps yourself.
 4. Confirm Site URL / redirect allow-list includes the local origins listed above.
 5. Live two-account isolation and browser acceptance checks.
 
-No public deployment was performed.
+The Render web service has now been created. See [deployment setup](DEPLOYMENT.md) for production callbacks and the remaining provider configuration; this does not imply hosted private-drawer validation is complete.
