@@ -6,7 +6,8 @@ Leave root directory and Docker command empty. Dockerfile: `./Dockerfile`.
 Health check: `/api/health`. Enable automatic deployment on commit.
 No paid database, disk, custom domain, or subscription is needed.
 
-The multi-stage image builds React with Node 24 and runs FastAPI with Python 3.11.
+The multi-stage image builds React with Node 24 and runs FastAPI with Python 3.13,
+matching the locally tested runtime.
 `/` serves the built app; `/api/*` is mounted directly onto the existing API.
 Static assets and the Google callback use the same origin. Runtime `PORT` comes
 from Render. Access logs are disabled to avoid logging OAuth callback codes.

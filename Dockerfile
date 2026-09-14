@@ -8,7 +8,7 @@ ARG VITE_SUPABASE_PUBLISHABLE_KEY
 ENV VITE_GOOGLE_AUTH_BACKEND=true
 RUN npm run build
 
-FROM python:3.11-slim-bookworm
+FROM python:3.13-slim-bookworm
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libglu1-mesa libglib2.0-0 libxrender1 libxext6 libsm6 libgomp1 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app/backend
