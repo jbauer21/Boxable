@@ -6,11 +6,11 @@ import { placedCols, placedRows, type ContainerSpec, type PlacedContainer } from
 import { fitGrid } from '../lib/gridLayout';
 import { tileBaseplates } from '../lib/baseplateTiler';
 import { download3mf } from '../api';
-import { arrange, colorFor, downloadJSON, groupId, minHeight, reconcile, specsForGroups, validPlacement, type Layout } from './model';
+import { arrange, colorFor, groupId, minHeight, reconcile, specsForGroups, validPlacement, type Layout } from './model';
 import { Plan3D } from './Plan3D';
 import './place.css';
 
-interface Props { drawerName:string; onRename:(name:string)=>void; drawer: DrawerState; groups: ItemGroup[]; onChange:(g:ItemGroup[])=>void; onMeasure:()=>void; layout:Layout; setLayout:Dispatch<SetStateAction<Layout>>; usableHeightMm:number; setUsableHeightMm:(value:number)=>void }
+interface Props { onSave:()=>Promise<void>; drawerName:string; onRename:(name:string)=>void; drawer: DrawerState; groups: ItemGroup[]; onChange:(g:ItemGroup[])=>void; onMeasure:()=>void; layout:Layout; setLayout:Dispatch<SetStateAction<Layout>>; usableHeightMm:number; setUsableHeightMm:(value:number)=>void }
 function NumberField({value,min=1,max=999,onChange,label}:{value:number;min?:number;max?:number;onChange:(n:number)=>void;label:string}){
   const [draft,setDraft]=useState(String(value));useEffect(()=>setDraft(String(value)),[value]);
   return <label className="place-field">{label}<input type="number" min={min} max={max} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={()=>{const n=Number(draft);if(Number.isFinite(n)&&n>=min&&n<=max)onChange(Math.round(n));else setDraft(String(value));}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>;
@@ -26,14 +26,14 @@ function PocketPattern({s}:{s:ContainerSpec}){
     {s.kind==='bin'?<>{Array.from({length:Math.max(0,s.length_div-1)},(_,i)=><path key={'x'+i} d={`M ${w*(i+1)/s.length_div} 4 V ${h-4}`}/>)}{Array.from({length:Math.max(0,s.width_div-1)},(_,i)=><path key={'y'+i} d={`M 4 ${h*(i+1)/s.width_div} H ${w-4}`}/>)}</>:s.kind==='spool'?<><circle cx={w/2} cy={h/2} r={Math.min(w,h)*.38}/><circle cx={w/2} cy={h/2} r={Math.min(w,h)*.15}/></>:Array.from({length:Math.min(200,s.pocket_rows*s.pocket_cols)},(_,i)=>{const x=3+(w-6)*((i%s.pocket_cols)+.5)/s.pocket_cols,y=3+(h-6)*(Math.floor(i/s.pocket_cols)+.5)/s.pocket_rows;return s.kind==='rect_pockets'?<rect key={i} x={x-s.pocket_length_mm/2} y={y-s.pocket_width_mm/2} width={s.pocket_length_mm} height={s.pocket_width_mm} rx="1"/>:<circle key={i} cx={x} cy={y} r={s.pocket_diam_mm/2}/>;})}
   </svg>;
 }
-export function Place({drawerName,onRename,drawer,groups,onChange,onMeasure,layout,setLayout,usableHeightMm,setUsableHeightMm}:Props){
+export function Place({onSave,drawerName,onRename,drawer,groups,onChange,onMeasure,layout,setLayout,usableHeightMm,setUsableHeightMm}:Props){
   const grid=useMemo(()=>fitGrid(drawer.widthMm,drawer.heightMm),[drawer.widthMm,drawer.heightMm]);
   const generated=useMemo(()=>specsForGroups(groups,usableHeightMm,grid.cols,grid.rows),[groups,usableHeightMm,grid.cols,grid.rows]);
   const [history,setHistory]=useState<Layout[]>([]),[future,setFuture]=useState<Layout[]>([]);
   const [selected,setSelected]=useState(''),[selectedGroup,setSelectedGroup]=useState(groups[0]?.id??'');
   const [query,setQuery]=useState(''),[highlight,setHighlight]=useState(0),[view,setView]=useState<'2d'|'3d'>('3d');
   const [message,setMessage]=useState('Add an object, set its quantity, and choose how it sits.');
-  const [mobileItems,setMobileItems]=useState(false),[zoom,setZoom]=useState(100),[busy,setBusy]=useState(false);
+  const [mobileItems,setMobileItems]=useState(false),[zoom,setZoom]=useState(100),[busy,setBusy]=useState(false),[saving,setSaving]=useState(false);
   const [ghost,setGhost]=useState<PlacedContainer|null>(null),[dragging,setDragging]=useState(false);
   const board=useRef<HTMLDivElement>(null),search=useRef<HTMLInputElement>(null);
   const drag=useRef<{p:PlacedContainer;x:number;y:number;cellX:number;cellY:number;candidate:PlacedContainer}|null>(null);
@@ -55,7 +55,7 @@ export function Place({drawerName,onRename,drawer,groups,onChange,onMeasure,layo
   const auto=()=>{const next=arrange(allSpecs,grid.cols,grid.rows,layout);commit(next,next.unplaced.length?`Best layout found: ${next.unplaced.length} bins still need space.`:'Auto arranged. Undo brings back your manual layout.');};
   const total=grid.cols*grid.rows;
   const export3mf=async()=>{if(!layout.placed.length||layout.unplaced.length||generated.skipped.length||generated.invalidNames.length)return;setBusy(true);try{const blob=await download3mf(layout.placed,tileBaseplates(grid.cols,grid.rows));const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='boxable.3mf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setMessage('3MF downloaded. Check total height and fit in your slicer.');}catch(e){setMessage(e instanceof Error?`3MF could not be built. ${e.message}`:'3MF could not be built.');}finally{setBusy(false);}};
-  const save=()=>{if(generated.invalidNames.length)return;downloadJSON({version:1,drawer:{widthMm:drawer.widthMm,heightMm:drawer.heightMm,depthMm:usableHeightMm},groups,items:layout.placed,unplaced:layout.unplaced,baseplates:tileBaseplates(grid.cols,grid.rows)});setMessage('Drawer plan saved, including positions, rotation, and height.');};
+  const save=async()=>{if(generated.invalidNames.length||saving)return;setSaving(true);try{await onSave();}catch(e){setMessage(e instanceof Error?e.message:'Could not save your drawer. Please try again.');}finally{setSaving(false);}};
   if(!total)return <section className="panel"><h2>Start with your drawer.</h2><p>Enter dimensions that fit at least one 42 × 42 mm cell.</p><button className="btn" onClick={onMeasure}>Measure drawer</button></section>;
   return <div className="place-workspace">
     <div className="place-mobile-bar"><button type="button" className="place-button" onClick={()=>setMobileItems(!mobileItems)}>{mobileItems?'Hide':'Add / edit'} things · {groups.length}</button><span>{layout.placed.length} bins placed</span></div>
@@ -98,7 +98,7 @@ export function Place({drawerName,onRename,drawer,groups,onChange,onMeasure,layo
           {!layout.placed.length&&<div className="place-board-empty">Your drawer starts here.<br/><span>Add an object to see its bin.</span></div>}
         </div><div className="place-front">FRONT OF DRAWER <span>↓</span></div></div></div>:<Plan3D placed={layout.placed} cols={grid.cols} rows={grid.rows} selected={selected} onSelect={choose} drawerWidth={drawer.widthMm} drawerLength={drawer.heightMm} drawerHeight={usableHeightMm}/>}
       </div>
-      <div className="place-bottom-actions"><button type="button" className="place-button" onClick={save} disabled={!!generated.invalidNames.length}>Export JSON</button><button type="button" className="place-primary" onClick={()=>void export3mf()} disabled={busy||!layout.placed.length||!!layout.unplaced.length||!!generated.skipped.length||!!generated.invalidNames.length}>{busy?'Building…':'Download 3MF'} <span aria-hidden="true">↓</span></button></div>
+      <div className="place-bottom-actions"><button type="button" className="place-button" onClick={()=>void save()} disabled={saving||!!generated.invalidNames.length}>{saving?'Saving…':'Save Drawer'}</button><button type="button" className="place-primary" onClick={()=>void export3mf()} disabled={busy||!layout.placed.length||!!layout.unplaced.length||!!generated.skipped.length||!!generated.invalidNames.length}>{busy?'Building…':'Download 3MF'} <span aria-hidden="true">↓</span></button></div>
     </section>
   </div>;
 }

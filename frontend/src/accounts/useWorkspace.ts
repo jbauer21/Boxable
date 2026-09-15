@@ -8,7 +8,7 @@ export function useWorkspace(userId:string|null){
  const [draft,setDraft]=useState<Draft>({document:newDocument(),photo:null,id:userId?crypto.randomUUID():null,revision:0,photoPath:null,dirty:false});
  const [ready,setReady]=useState(false),[status,setStatus]=useState(''),[conflict,setConflict]=useState(false),[retry,setRetry]=useState(0);
  const latest=useRef(draft);latest.current=draft;
- const paused=useRef(false);
+ const paused=useRef(false),pendingSave=useRef<Promise<boolean>|null>(null);
  const alive=useRef(true),saving=useRef(false),photoSaved=useRef<File|null>(null),generation=useRef(0),localWrites=useRef(Promise.resolve()),importGuest=useRef(false);
  const persist=useCallback((value:Draft)=>{localWrites.current=localWrites.current.catch(()=>{}).then(()=>writeDraft(key,value));return localWrites.current;},[key]);
  useEffect(()=>{
@@ -28,26 +28,40 @@ export function useWorkspace(userId:string|null){
   window.addEventListener('beforeunload',warn);window.addEventListener('online',online);
   return()=>{window.removeEventListener('beforeunload',warn);window.removeEventListener('online',online);};
  },[]);
- useEffect(()=>{
-  if(!ready||!userId||!draft.dirty||conflict)return;
-  setStatus('Unsaved changes');
-  const timer=setTimeout(()=>{void (async()=>{
-   if(saving.current||paused.current)return;saving.current=true;const current=latest.current,token=generation.current;
-   const id=current.id??crypto.randomUUID();
-   setStatus('Saving…');
+ const saveCurrent=useCallback(():Promise<boolean>=>{
+  if(pendingSave.current)return pendingSave.current;
+  if(!ready||!userId||conflict||paused.current)return Promise.resolve(false);
+  const current=latest.current,token=generation.current;
+  if(!current.dirty&&current.revision>0)return Promise.resolve(true);
+  saving.current=true;
+  const id=current.id??crypto.randomUUID();
+  setStatus('Saving…');
+  const task=(async()=>{
    try{
     const row=await saveDrawer(userId,id,current.revision,current.document,current.photo,current.photoPath,!!current.photoChanged);
-    if(!alive.current||token!==generation.current)return;
+    if(!alive.current||token!==generation.current)return false;
     photoSaved.current=current.photo;
     const unchanged=latest.current.document===current.document&&latest.current.photo===current.photo;
     const next={...latest.current,id:row.id,revision:row.revision,photoPath:row.photo_path,photoChanged:latest.current.photo!==current.photo,dirty:!unchanged};
     latest.current=next;setDraft(next);setStatus(unchanged?'Saved':'Unsaved changes');
     if(importGuest.current){await writeDraft('guest',null);sessionStorage.removeItem('boxable-import-guest');importGuest.current=false;}
-   }catch(error){if(alive.current&&token===generation.current){setConflict(error instanceof ConflictError);setStatus(error instanceof Error?error.message:'Could not save. Your changes are still in this tab.');}}
-   finally{saving.current=false;}
-  })();},1000);
+    return true;
+   }catch(error){if(alive.current&&token===generation.current){setConflict(error instanceof ConflictError);setStatus(error instanceof Error?error.message:'Could not save. Your changes are still in this tab.');}return false;}
+  })();
+  pendingSave.current=task.finally(()=>{saving.current=false;pendingSave.current=null;});
+  return pendingSave.current;
+ },[ready,userId,conflict]);
+ useEffect(()=>{
+  if(!ready||!userId||!draft.dirty||conflict)return;
+  if(!saving.current)setStatus('Unsaved changes');
+  const timer=setTimeout(()=>{void saveCurrent();},1000);
   return()=>clearTimeout(timer);
- },[draft,ready,userId,conflict,retry]);
+ },[draft,ready,userId,conflict,retry,saveCurrent]);
+ const save=async()=>{
+  // Join an autosave already in progress, then flush any newer edits.
+  do {if(!await saveCurrent())return false;} while(latest.current.dirty);
+  return true;
+ };
  const change=useCallback((update:(document:DrawerDocument)=>DrawerDocument,photo?:File|null)=>{setDraft(old=>{const document=update(old.document);const nextPhoto=photo===undefined?old.photo:photo;if(nextPhoto===old.photo&&JSON.stringify(document)===JSON.stringify(old.document))return old;return {...old,document,photo:nextPhoto,photoChanged:old.photoChanged||nextPhoto!==old.photo,dirty:true};});},[]);
  const canLeave=()=>!saving.current&&(!latest.current.dirty||window.confirm('This drawer has unsaved changes. Leave and discard those changes?'));
  const fresh=()=>{if(!canLeave())return false;generation.current++;photoSaved.current=null;setDraft({document:newDocument(),photo:null,id:userId?crypto.randomUUID():null,revision:0,photoPath:null,dirty:!!userId});setConflict(false);setStatus('');return true;};
@@ -61,5 +75,5 @@ export function useWorkspace(userId:string|null){
  const forget=async()=>{if(!canLeave())return false;paused.current=true;generation.current++;await localWrites.current.catch(()=>{});await writeDraft(key,null);return true;};
  const discard=()=>{generation.current++;photoSaved.current=null;setConflict(false);setStatus('');setDraft({document:newDocument(),photo:null,id:userId?crypto.randomUUID():null,revision:0,photoPath:null,dirty:false});};
  const saveCopy=()=>{if(saving.current)return;generation.current++;photoSaved.current=null;setConflict(false);setDraft(old=>({...old,id:crypto.randomUUID(),revision:0,photoPath:null,dirty:true,photoChanged:!!old.photo,document:{...old.document,name:old.document.name.slice(0,73)+' (copy)'}}));};
- return {draft,ready,status,conflict,change,fresh,open,beforeAuth,forget,saveCopy,discard,resume:()=>{paused.current=false;setRetry(v=>v+1);},retry:()=>setRetry(v=>v+1)};
+ return {draft,ready,status,conflict,save,change,fresh,open,beforeAuth,forget,saveCopy,discard,resume:()=>{paused.current=false;setRetry(v=>v+1);},retry:()=>setRetry(v=>v+1)};
 }

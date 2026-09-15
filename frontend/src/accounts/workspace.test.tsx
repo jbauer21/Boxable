@@ -11,6 +11,53 @@ beforeEach(()=>{vi.clearAllMocks();sessionStorage.clear();mocks.read.mockResolve
 afterEach(()=>{cleanupReact();vi.useRealTimers();});
 async function ready(user:string|null='a'){vi.useFakeTimers();const hook=renderHook(()=>useWorkspace(user));await act(async()=>{});expect(hook.result.current.ready).toBe(true);return hook;}
 async function tick(){await act(async()=>{await vi.advanceTimersByTimeAsync(1100);});}
+describe('Save Drawer',()=>{
+ it('saves immediately and updates the same drawer on later saves',async()=>{
+  const {result}=await ready();
+  act(()=>result.current.change(d=>({...d,name:'Desk drawer',drawer:{...d.drawer,widthMm:420,heightMm:252}})));
+  await act(async()=>{expect(await result.current.save()).toBe(true);});
+  expect(mocks.save).toHaveBeenCalledTimes(1);
+  expect(mocks.save.mock.calls[0][0]).toBe('a');
+  expect(mocks.save.mock.calls[0][3]).toEqual(result.current.draft.document);
+  const id=result.current.draft.id;
+  await act(async()=>{expect(await result.current.save()).toBe(true);});
+  await tick();
+  expect(mocks.save).toHaveBeenCalledTimes(1);
+  act(()=>result.current.change(d=>({...d,name:'Updated desk'})));
+  await act(async()=>{expect(await result.current.save()).toBe(true);});
+  expect(mocks.save.mock.calls[1][1]).toBe(id);
+  expect(mocks.save.mock.calls[1][2]).toBe(1);
+ });
+ it('waits for autosave and flushes newer edits before confirming success',async()=>{
+  let complete:(row:unknown)=>void=()=>{};
+  mocks.save.mockImplementationOnce(()=>new Promise(resolve=>{complete=resolve;}));
+  const {result}=await ready();
+  act(()=>result.current.change(d=>({...d,name:'First'})));
+  await tick();
+  act(()=>result.current.change(d=>({...d,name:'Latest'})));
+  let saved:Promise<boolean>;
+  act(()=>{saved=result.current.save();});
+  expect(mocks.save).toHaveBeenCalledTimes(1);
+  await act(async()=>{complete({id:'drawer',revision:1,photo_path:null});expect(await saved).toBe(true);});
+  expect(mocks.save).toHaveBeenCalledTimes(2);
+  expect(mocks.save.mock.calls[1][3].name).toBe('Latest');
+  expect(result.current.draft.dirty).toBe(false);
+ });
+ it('retains failed saves and allows a manual retry',async()=>{
+  mocks.save.mockRejectedValueOnce(new Error('Offline'));
+  const {result}=await ready();
+  act(()=>result.current.change(d=>({...d,name:'Desk'})));
+  await act(async()=>{expect(await result.current.save()).toBe(false);});
+  expect(result.current.draft.dirty).toBe(true);
+  expect(result.current.status).toBe('Offline');
+  await act(async()=>{expect(await result.current.save()).toBe(true);});
+ });
+ it('does not write guest drawers to an account',async()=>{
+  const {result}=await ready(null);
+  await act(async()=>{expect(await result.current.save()).toBe(false);});
+  expect(mocks.save).not.toHaveBeenCalled();
+ });
+});
 describe('autosave and recovery',()=>{
  it('debounces edits and only marks the confirmed snapshot saved',async()=>{const {result}=await ready();act(()=>{result.current.change(d=>({...d,name:'Desk'}));result.current.change(d=>({...d,name:'Kitchen'}));});expect(mocks.save).not.toHaveBeenCalled();await tick();expect(mocks.save).toHaveBeenCalledTimes(1);expect(mocks.save.mock.calls[0][3].name).toBe('Kitchen');expect(result.current.draft.dirty).toBe(false);expect(result.current.status).toBe('Saved');});
  it('does not mark unchanged editor reconciliation dirty',async()=>{const {result}=await ready();act(()=>result.current.change(d=>({...d,layout:{...d.layout}})));await tick();expect(mocks.save).not.toHaveBeenCalled();});
