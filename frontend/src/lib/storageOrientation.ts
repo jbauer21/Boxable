@@ -1,5 +1,5 @@
 import { getCatalogObject } from './catalog';
-import { BIN_FLOOR_MM, BIN_WALL_MM } from './catalogSpecs';
+import { binInteriorVolumeMm3, BIN_FLOOR_MM, BIN_WALL_MM } from './catalogSpecs';
 import { CELL_SIZES, pocketDepthForUpright, pocketHolders } from './itemCatalog';
 import type { ItemGroup } from './state';
 import { makeSpec, type ContainerSpec } from './types';
@@ -22,6 +22,7 @@ export function storageDimensions(group: ItemGroup) {
 }
 
 export function orientedGroupSpecs(group: ItemGroup, maxHeightU: number, maxFootprintU: number): ContainerSpec[] {
+  if (group.storageOrientation === 'open') return openGroupSpecs(group, maxHeightU, maxFootprintU);
   const shape = storageDimensions(group);
   if (!shape || !shape.dims.every(d => Number.isFinite(d) && d > 0) || maxHeightU < 2) return [];
   const [thin, middle, long] = [...shape.dims].sort((a, b) => a - b);
@@ -60,4 +61,40 @@ export function orientedGroupSpecs(group: ItemGroup, maxHeightU: number, maxFoot
     if (!best || area < best.area || (area === best.area && bins < best.bins)) best = { l, w, bins, area };
   }
   return best ? [makeSpec({ name: group.name, kind: 'bin', length_u: best.l, width_u: best.w, height_u: height, quantity: best.bins })] : [];
+}
+
+/** Shared loose storage: fit each item lying flat and reserve volume for every whole item. */
+function openGroupSpecs(group: ItemGroup, maxHeightU: number, maxFootprintU: number): ContainerSpec[] {
+  const obj = group.mode === 'catalog' ? getCatalogObject(group.objectId) : null;
+  let shape = storageDimensions(group);
+  if (obj && !shape) {
+    const g = obj.geometry;
+    const b = g.bounding_box_mm;
+    const side = Math.cbrt(g.average_volume_mm3);
+    shape = { dims: b ? [b.x, b.y, b.z] : g.diameter_mm && g.length_mm
+      ? [g.diameter_mm, g.diameter_mm, g.length_mm] : [side, side, side],
+      round: false, clearance: obj.storage.clearance_mm };
+  }
+  if (!shape || !shape.dims.every(d => Number.isFinite(d) && d > 0) || !Number.isFinite(group.count)) return [];
+  const [thin, middle, long] = [...shape.dims].sort((a, b) => a - b);
+  const volume = obj ? obj.geometry.average_volume_mm3 / Math.max(0.05, obj.storage.packing_factor)
+    : shape.dims.reduce((a, b) => a * b, 1);
+  if (!Number.isFinite(volume) || volume <= 0) return [];
+  const count = Math.max(1, Math.ceil(group.count));
+  const cap = Math.min(6, Math.floor(maxFootprintU));
+  let best: { l: number; w: number; h: number; bins: number; volume: number } | null = null;
+  for (let l = 1; l <= cap; l++) for (let w = l; w <= cap; w++) {
+    if (l * 42 - 2 * BIN_WALL_MM < middle + shape.clearance || w * 42 - 2 * BIN_WALL_MM < long + shape.clearance) continue;
+    for (let h = 2; h <= Math.min(20, Math.floor(maxHeightU)); h++) {
+      if (h * 7 - BIN_FLOOR_MM < thin) continue;
+      const capacity = Math.floor(binInteriorVolumeMm3(l, w, h) / volume);
+      if (!capacity) continue;
+      const bins = Math.ceil(count / capacity), totalVolume = bins * l * w * h;
+      // Keep the collection together whenever possible; prefer compact, shallow bins.
+      if (!best || bins < best.bins || (bins === best.bins && (totalVolume < best.volume || (totalVolume === best.volume && h < best.h)))) {
+        best = { l, w, h, bins, volume: totalVolume };
+      }
+    }
+  }
+  return best ? [makeSpec({ name: group.name, kind: 'bin', length_u: best.l, width_u: best.w, height_u: best.h, quantity: best.bins })] : [];
 }

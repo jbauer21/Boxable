@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getCatalogObject } from './catalog';
+import { CATALOG_OBJECTS, getCatalogObject } from './catalog';
 import { specsForGroup } from './groupSpecs';
 import { cloneGroup, newCatalogGroup, newCustomGroup, newStandardGroup } from './state';
 import { arrange, reconcile, specsForGroups } from '../place/model';
+import { binInteriorVolumeMm3 } from './catalogSpecs';
+import { newDocument, parseDocument } from '../accounts/document';
 const glue = (storageOrientation: 'flat' | 'vertical', count = 6) => ({ ...newCatalogGroup('glue_stick', 'Glue sticks'), storageOrientation, count });
 describe('storage orientation', () => {
   it('keeps separate compartments for horizontal objects that require them', () => {
@@ -91,5 +93,53 @@ describe('drawer height limits', () => {
       expect(result.specs).toEqual([]);
       expect(result.invalidNames).toEqual([g.id]);
     }
+  });
+});
+
+describe('open storage', () => {
+  it('sizes one undivided bin for pens lying flat and grows with quantity', () => {
+    const obj = getCatalogObject('pen_standard')!;
+    const volumes: number[] = [];
+    for (const count of [1, 10, 50]) {
+      const made = specsForGroup({...newCatalogGroup(obj.id, 'Pens'), count, storageOrientation: 'open'}, 9, 6);
+      expect(made).toHaveLength(1);
+      const s = made[0];
+      expect(s).toMatchObject({kind: 'bin', quantity: 1, length_div: 0, width_div: 0, pocket_rows: 0, pocket_cols: 0});
+      const volume = binInteriorVolumeMm3(s.length_u, s.width_u, s.height_u);
+      expect(volume).toBeGreaterThanOrEqual(count * obj.geometry.average_volume_mm3 / obj.storage.packing_factor);
+      expect(s.width_u * 42 - 8).toBeGreaterThanOrEqual(obj.geometry.bounding_box_mm!.x);
+      volumes.push(volume);
+    }
+    expect(volumes[1]).toBeGreaterThan(volumes[0]);
+    expect(volumes[2]).toBeGreaterThan(volumes[1]);
+  });
+  it('supports every catalog sizing mode as well as batteries and custom objects', () => {
+    for (const obj of CATALOG_OBJECTS) {
+      const made = specsForGroup({...newCatalogGroup(obj.id, obj.name), storageOrientation: 'open'}, 20, 6);
+      // Oversized objects may be rejected, but must never fall back to fitted holders.
+      expect(made.every(s => s.kind === 'bin' && s.length_div === 0 && s.width_div === 0)).toBe(true);
+    }
+    for (const g of [newCatalogGroup('paper_clip', 'Clips'), newCatalogGroup('cable_spool_generic', 'Spool'), newStandardGroup('batteryAA'), newCustomGroup()]) {
+      expect(specsForGroup({...g, storageOrientation: 'open'}, 20, 6)[0].kind).toBe('bin');
+    }
+  });
+  it('splits overflow by whole-item capacity and respects size limits', () => {
+    const g = {...newCustomGroup(), mode: 'custom' as const, lengthMm: 30, widthMm: 20, heightMm: 10, count: 999, storageOrientation: 'open' as const};
+    const made = specsForGroup(g, 4, 2);
+    expect(made[0].quantity).toBeGreaterThan(1);
+    const s = made[0];
+    expect(s.quantity * Math.floor(binInteriorVolumeMm3(s.length_u, s.width_u, s.height_u) / 6000)).toBeGreaterThanOrEqual(999);
+    expect(s.height_u).toBeLessThanOrEqual(4);
+    expect(specsForGroup({...g, lengthMm: 300}, 4, 6)).toEqual([]);
+    expect(specsForGroup(g, 2, 6)).toEqual([]);
+  });
+  it('preserves Open through duplication, saved documents, placement and export', () => {
+    const g = {...newCatalogGroup('pen_standard', 'Pens'), count: 10, storageOrientation: 'open' as const};
+    expect(cloneGroup(g).storageOrientation).toBe('open');
+    expect(parseDocument({...newDocument(), groups: [g]}).groups[0].storageOrientation).toBe('open');
+    const result = specsForGroups([g], 80, 12, 12);
+    const layout = arrange(result.specs, 12, 12);
+    expect(layout.placed).toHaveLength(1);
+    expect(JSON.parse(JSON.stringify(layout)).placed[0].spec.kind).toBe('bin');
   });
 });

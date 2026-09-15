@@ -6,7 +6,7 @@ const dimension = z.number().finite().min(0).max(10000);
 const id = z.string().min(1).max(160);
 const name = z.string().max(80);
 const point = z.tuple([z.number().finite(), z.number().finite()]);
-const common = { id, name, count: z.number().int().min(1).max(999), storageOrientation: z.enum(['flat','vertical']).optional() };
+const common = { id, name, count: z.number().int().min(1).max(999), storageOrientation: z.enum(['flat','vertical','open']).optional() };
 const group = z.discriminatedUnion('mode', [
   z.object({...common, mode:z.literal('standard'), type:z.enum(ALL_ITEM_TYPES), customCell:z.object({diameterMm:dimension,lengthMm:dimension})}),
   z.object({...common, mode:z.literal('catalog'), objectId:id}),
