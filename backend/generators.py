@@ -12,6 +12,7 @@ from pathlib import Path
 
 import cadquery as cq
 from cqgridfinity import GridfinityBaseplate, GridfinityBox
+from mesh_cache import MeshCache
 
 from geometry import (
     POCKET_EDGE_MM,
@@ -167,7 +168,7 @@ _CAD_LOCK = threading.Lock()
 # repeatedly (every preview refresh re-sends the same payload). Cache results
 # across requests, keyed by geometry. Checked inside _CAD_LOCK so a
 # duplicate request waits for the first compute and then reuses it.
-_MESH_CACHE: dict[str, tuple] = {}
+_MESH_CACHE = MeshCache()
 
 
 def _weld_mesh(vertices, triangles, digits=4):

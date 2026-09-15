@@ -6,6 +6,9 @@ Run with:  uvicorn main:app --host 0.0.0.0 --port 8000
 from __future__ import annotations
 
 import json
+import logging
+import time
+import uuid
 
 import cv2
 import numpy as np
@@ -18,6 +21,8 @@ from detection import detect_and_measure, refine_markers
 from geometry import GRID_UNIT_MM, ContainerSpec
 from homography import measure_drawer
 from threemf import baseplate_key, build_3mf, geometry_key
+
+logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(title="Boxable", version="1.0")
 app.add_middleware(
@@ -223,6 +228,9 @@ def generate(request: GenerateRequest):
     specs = [item.spec.to_spec() for item in request.items]
     _validate(specs)
 
+    request_id = uuid.uuid4().hex[:12]
+    started = time.monotonic()
+    logger.info("3MF %s started: %d containers, %d baseplates", request_id, len(specs), len(request.baseplates))
     from generators import tessellate_baseplate, tessellate_container
 
     meshes: dict[str, tuple] = {}
@@ -230,6 +238,7 @@ def generate(request: GenerateRequest):
     for item, spec in zip(request.items, specs):
         key = geometry_key(spec)
         if key not in meshes:
+            logger.info("3MF %s building container %dx%dx%d (%s)", request_id, spec.length_u, spec.width_u, spec.height_u, spec.kind)
             meshes[key] = tessellate_container(spec)
         placed.append((spec, item.col, item.row, item.rotated))
 
@@ -238,10 +247,13 @@ def generate(request: GenerateRequest):
     for plate in request.baseplates:
         key = baseplate_key(plate.length_u, plate.width_u)
         if key not in plate_meshes:
+            logger.info("3MF %s building baseplate %dx%d", request_id, plate.length_u, plate.width_u)
             plate_meshes[key] = tessellate_baseplate(plate.length_u, plate.width_u)
         plates.append((plate.length_u, plate.width_u, plate.col, plate.row))
 
+    logger.info("3MF %s assembling archive", request_id)
     payload = build_3mf(placed, meshes, plates, plate_meshes)
+    logger.info("3MF %s completed in %.1fs (%d bytes)", request_id, time.monotonic() - started, len(payload))
     return Response(
         content=payload,
         media_type="model/3mf",

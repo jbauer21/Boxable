@@ -31,6 +31,23 @@ The Vite frontend proxies `/api` to this port during development.
 - `POST /preview` — placed container specs → triangle meshes in drawer mm.
 - `POST /generate` — placed container specs → a `.3mf` download.
 
+## Troubleshooting exports on Render
+
+The production image installs Fontconfig and DejaVu fonts, and checks font
+discovery as the application user during the build. Rebuild the image if logs
+show `Fontconfig error: Cannot load default config file`.
+
+Exports log a request identifier, each geometry being built, archive assembly,
+and completion time. A restart without completion should be checked against
+Render's service events and memory metrics; a 502 alone does not establish why
+the process stopped. Container names are not included in these progress logs.
+
+The mesh cache retains at most approximately 32 MiB of mesh data. Active
+requests and CAD kernel allocations consume additional memory. A local macOS
+5×5 baseplate run peaked at about 553 MiB; Linux usage may differ. Large exports
+can still exceed the free service's memory allowance despite the cache limit.
+Validate a representative layout after deployment before relying on that tier.
+
 ## Tests
 
 ```bash

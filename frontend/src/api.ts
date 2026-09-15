@@ -65,6 +65,9 @@ export async function download3mf(
     body: JSON.stringify({ items, baseplates }),
   });
   if (!response.ok) {
+    if ([502, 503, 504].includes(response.status)) {
+      throw new Error(`The generation server became unavailable or timed out (${response.status}). Try again shortly. If this repeats, try a smaller layout; the server may need more memory.`);
+    }
     const text = await response.text();
     throw new Error(text || `generate failed (${response.status})`);
   }
