@@ -106,8 +106,8 @@ after deployment; do not silently change the plan to paid if a workload exceeds 
 ## Validation
 
 Local: 157 frontend tests, production build, 51 backend regressions, and four
-production-routing/OAuth/SMTP tests pass. Live OAuth, SMTP delivery and private
-drawers require provider credentials/configuration and acceptance checks.
+production-routing/OAuth/SMTP tests pass. Live setup checks are recorded below;
+the full account and drawer acceptance suite is not yet complete.
 
 ## Verified deployment
 
@@ -116,6 +116,41 @@ on September 14, 2026. The live homepage and `/api/health` returned 200. A synth
 450 × 300 mm drawer measured correctly through `/api/measure`. A 1 × 1 × 3 unit bin
 returned a 3D preview and a valid 3MF archive through the production API. Unknown
 API routes returned 404. Larger CAD workloads were not load-tested on the free tier.
-Brevo Free is active and the Boxable Gmail sender is verified; SMTP inbox delivery
-remains unverified. Google branding is configured; credential entry and Supabase
-provider configuration remain necessary before Google sign-in can be marked ready.
+The subsequent environment rebuild `dep-dak3g6bl550s73bt3fv0` succeeded with
+commit `6900d0e`. Google and SMTP credentials are saved in Render, outside Git.
+
+On September 14, 2026, the accounts migration was applied successfully to Supabase
+project `dlnyuqnwmojzleejussf`. This creates profiles, versioned drawers, and the
+private `drawer-photos` bucket with verified-owner policies. Google is enabled
+with the web client configured in Render; nonce checks remain enabled. A live
+Google login with the Boxable organization account returned to the planner with
+an authenticated session. A drawer named `Setup check drawer`, measuring
+450 × 300 mm with 65 mm usable depth, reached the visible `Saved` state.
+
+Supabase's Site URL is `https://boxable.onrender.com/`. The exact production URL
+and localhost/127.0.0.1 callbacks on ports 5173 and 5174 are allow-listed.
+Supabase custom SMTP uses Brevo with port 587 and the verified Boxable sender;
+Render retains port 2525. The repository confirmation and recovery templates
+were applied. A recovery request from the live application delivered the branded
+`Reset your Boxable password` email to the Boxable Gmail inbox. Brevo rewrote the
+freemail sender to its authenticated `brevosend.com` domain and wrapped the link
+for tracking. Recovery-link completion still needs verification. The Brevo tracking UI offers
+anonymization, but no switch to disable link wrapping was found; do not treat
+anonymization as disabling tracking.
+
+A fresh Google sign-in and reopening the test drawer restored its name,
+450 × 300 mm dimensions, 65 mm usable height, and Place step. An 80 × 40 × 20 mm
+custom object was added, rotated and moved with the keyboard, autosaved, and
+reopened with its name and 3 × 2 cell rotation intact. Supabase
+minimum password length was visually confirmed as 15; email confirmation remains
+enabled. Direct anonymous API reads of profiles and drawers returned 401
+permission denied, rather than the earlier missing-table errors.
+
+Remaining acceptance checks: exact photo/coordinate restoration;
+registration/confirmation and password reset completion; live cross-account
+record/photo isolation; interrupted uploads and conflicting tabs. The first
+session ended during validation; its cause has not been established, although
+a subsequent sign-in and reopening succeeded. Browser approval service usage
+exhaustion and timeouts intermittently interrupted UI checks. Server-side SMTP
+delivery from Render itself has not been exercised; the successful delivery above
+used Supabase Auth with Brevo.
