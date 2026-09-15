@@ -14,7 +14,7 @@ export function useAccount(){
  },[]);
  return {user,loading,recovery,setRecovery,error};
 }
-export function Auth({onClose,onBeforeAuth,recovery=false,onRecovered}:{onClose:()=>void;onBeforeAuth:()=>Promise<void>;recovery?:boolean;onRecovered:()=>void}){
+export function Auth({onClose,onBeforeAuth,savingDrawer=false,recovery=false,onRecovered}:{onClose:()=>void;onBeforeAuth:()=>Promise<void>;savingDrawer?:boolean;recovery?:boolean;onRecovered:()=>void}){
  const [mode,setMode]=useState<'login'|'register'|'forgot'|'verify'|'reset'>(recovery?'reset':'login');
  const [name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[show,setShow]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
  useEffect(()=>{if(recovery)setMode('reset');},[recovery]);
@@ -39,7 +39,7 @@ export function Auth({onClose,onBeforeAuth,recovery=false,onRecovered}:{onClose:
   }
  });};
  const title=mode==='register'?'A home for your drawers.':mode==='forgot'?'Forgot your password?':mode==='verify'?'Check your inbox.':mode==='reset'?'Choose a new password.':'Welcome home.';
- return <section className="account-panel" aria-labelledby="auth-title"><p className="account-eyebrow">YOUR BOXABLE ACCOUNT</p><h1 id="auth-title">{title}</h1><p>Keep your drawers, photos, and plans together. Just for you.</p>
+ return <section className="account-panel" aria-labelledby="auth-title"><p className="account-eyebrow">YOUR BOXABLE ACCOUNT</p><h1 id="auth-title">{title}</h1><p>{savingDrawer?"Your drawer is cached in this browser. Sign in or create an account and we’ll save it automatically after you’re signed in. If you confirm your email, open the link in this browser.":"Keep your drawers, photos, and plans together. Just for you."}</p>
  {!supabase&&<p role="status" className="account-notice">Account storage is not connected yet. You can still try the planner and export your layout.</p>}
  <form onSubmit={submit}>
  {mode==='register'&&<label>Your name<input autoComplete="name" required maxLength={80} value={name} onChange={e=>setName(e.target.value)} pattern={".*\\S.*"}/></label>}

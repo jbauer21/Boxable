@@ -50,3 +50,36 @@ it('keeps the planner open and shows the error when saving fails',async()=>{
  expect(window.location.hash).toBe('#/planner');
  expect(screen.queryByRole('heading',{name:'My saved drawers'})).toBeNull();
 });
+
+it('only shows My drawers to signed-in users',async()=>{
+ mocks.user=null;
+ const view=render(<App/>);
+ await screen.findByRole('button',{name:'Save Drawer'});
+ expect(screen.queryByRole('button',{name:'My drawers'})).toBeNull();
+ mocks.user={id:'owner'};view.rerender(<App/>);
+ expect(await screen.findByRole('button',{name:'My drawers'})).toBeTruthy();
+});
+
+it('retains the planner when guest caching fails',async()=>{
+ mocks.user=null;mocks.write.mockRejectedValue(new Error('Storage full'));
+ render(<App/>);
+ fireEvent.click(await screen.findByRole('button',{name:'Save Drawer'}));
+ expect(await screen.findByRole('alert')).toHaveProperty('textContent',expect.stringContaining('could not be cached'));
+ expect(window.location.hash).toBe('#/planner');
+ expect(mocks.save).not.toHaveBeenCalled();
+});
+
+it('resumes a cached save after a confirmation link in a new tab and waits for cloud success',async()=>{
+ const document=newDocument();document.step=2;document.name='Guest office';document.drawer.widthMm=420;document.drawer.heightMm=252;
+ mocks.read.mockImplementation(async key=>key==='guest'?{document,photo:null,id:null,revision:0,photoPath:null,dirty:true,pendingAccountSave:true}:undefined);
+ let complete:(value:unknown)=>void=()=>{};
+ mocks.save.mockImplementation((_user,id)=>new Promise(resolve=>{complete=()=>resolve({id,revision:1,photo_path:null});}));
+ window.location.hash='/account';render(<App/>);
+ await screen.findByRole('button',{name:'Save Drawer'});
+ expect(screen.queryByRole('heading',{name:'My saved drawers'})).toBeNull();
+ await waitFor(()=>expect(mocks.save).toHaveBeenCalledTimes(1),{timeout:2500});
+ expect(mocks.save.mock.calls[0][3].name).toBe('Guest office');
+ complete(null);
+ await screen.findByRole('heading',{name:'My saved drawers'});
+ expect(mocks.write).toHaveBeenCalledWith('guest',null);
+});

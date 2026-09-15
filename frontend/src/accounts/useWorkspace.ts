@@ -6,6 +6,7 @@ import { cleanup, ConflictError, getDrawer, photoFile, saveDrawer, type DrawerRo
 export function useWorkspace(userId:string|null){
  const key=userId?`user:${userId}`:'guest';
  const [draft,setDraft]=useState<Draft>({document:newDocument(),photo:null,id:userId?crypto.randomUUID():null,revision:0,photoPath:null,dirty:false});
+ const [importing,setImporting]=useState(false),[importedSaved,setImportedSaved]=useState(false);
  const [ready,setReady]=useState(false),[status,setStatus]=useState(''),[conflict,setConflict]=useState(false),[retry,setRetry]=useState(0);
  const latest=useRef(draft);latest.current=draft;
  const paused=useRef(false),pendingSave=useRef<Promise<boolean>|null>(null);
@@ -15,7 +16,7 @@ export function useWorkspace(userId:string|null){
   alive.current=true;let cancelled=false;
   void (async()=>{try{
    let restored=await readDraft(key);
-   if(userId&&sessionStorage.getItem('boxable-import-guest')==='yes'){const guest=await readDraft('guest');if(guest){restored={...guest,id:null,revision:0,photoPath:null,dirty:true,photoChanged:!!guest.photo};importGuest.current=true;}}
+   if(userId){const guest=await readDraft('guest');if(guest&&(guest.pendingAccountSave||sessionStorage.getItem('boxable-import-guest')==='yes')){restored={...guest,pendingAccountSave:false,id:null,revision:0,photoPath:null,dirty:true,photoChanged:!!guest.photo};importGuest.current=true;setImporting(true);}}
    if(restored&&!cancelled){if(userId&&!restored.id)restored.id=crypto.randomUUID();restored.document=parseDocument(restored.document);photoSaved.current=restored.photoPath?restored.photo:null;setDraft(restored);}
   }catch{if(alive.current)setStatus('The local recovery draft could not be read. Your cloud drawers are still available.');}finally{if(!cancelled)setReady(true);}})();
   if(userId)void cleanup(userId).catch(()=>{});
@@ -44,13 +45,13 @@ export function useWorkspace(userId:string|null){
     const unchanged=latest.current.document===current.document&&latest.current.photo===current.photo;
     const next={...latest.current,id:row.id,revision:row.revision,photoPath:row.photo_path,photoChanged:latest.current.photo!==current.photo,dirty:!unchanged};
     latest.current=next;setDraft(next);setStatus(unchanged?'Saved':'Unsaved changes');
-    if(importGuest.current){await writeDraft('guest',null);sessionStorage.removeItem('boxable-import-guest');importGuest.current=false;}
+    if(importGuest.current){await persist(next);await writeDraft('guest',null);sessionStorage.removeItem('boxable-import-guest');importGuest.current=false;setImporting(false);setImportedSaved(true);}
     return true;
    }catch(error){if(alive.current&&token===generation.current){setConflict(error instanceof ConflictError);setStatus(error instanceof Error?error.message:'Could not save. Your changes are still in this tab.');}return false;}
   })();
   pendingSave.current=task.finally(()=>{saving.current=false;pendingSave.current=null;});
   return pendingSave.current;
- },[ready,userId,conflict]);
+ },[ready,userId,conflict,persist]);
  useEffect(()=>{
   if(!ready||!userId||!draft.dirty||conflict)return;
   if(!saving.current)setStatus('Unsaved changes');
@@ -71,9 +72,9 @@ export function useWorkspace(userId:string|null){
   if(latest.current.document!==snapshot.document||latest.current.photo!==snapshot.photo){setStatus('Your current drawer changed while opening. Please try again.');return false;}
   photoSaved.current=photo;setDraft({document:loaded.document,photo,id:loaded.id,revision:loaded.revision,photoPath:loaded.photo_path,dirty:false});setConflict(false);setStatus('Saved');return true;
  }catch{setStatus('Could not open this drawer or its photo. Try again.');return false;}};
- const beforeAuth=async()=>{await persist(latest.current);if(!userId&&(latest.current.dirty||latest.current.document.drawer.widthMm>0)){sessionStorage.setItem('boxable-import-guest','yes');}};
+ const beforeAuth=async(saveRequested=false)=>{const next=saveRequested?{...latest.current,pendingAccountSave:true}:latest.current;await persist(next);latest.current=next;setDraft(next);if(!userId&&(latest.current.dirty||latest.current.document.drawer.widthMm>0)){sessionStorage.setItem('boxable-import-guest','yes');}};
  const forget=async()=>{if(!canLeave())return false;paused.current=true;generation.current++;await localWrites.current.catch(()=>{});await writeDraft(key,null);return true;};
  const discard=()=>{generation.current++;photoSaved.current=null;setConflict(false);setStatus('');setDraft({document:newDocument(),photo:null,id:userId?crypto.randomUUID():null,revision:0,photoPath:null,dirty:false});};
  const saveCopy=()=>{if(saving.current)return;generation.current++;photoSaved.current=null;setConflict(false);setDraft(old=>({...old,id:crypto.randomUUID(),revision:0,photoPath:null,dirty:true,photoChanged:!!old.photo,document:{...old.document,name:old.document.name.slice(0,73)+' (copy)'}}));};
- return {draft,ready,status,conflict,save,change,fresh,open,beforeAuth,forget,saveCopy,discard,resume:()=>{paused.current=false;setRetry(v=>v+1);},retry:()=>setRetry(v=>v+1)};
+ return {draft,ready,importing,importedSaved,status,conflict,save,change,fresh,open,beforeAuth,forget,saveCopy,discard,resume:()=>{paused.current=false;setRetry(v=>v+1);},retry:()=>setRetry(v=>v+1)};
 }

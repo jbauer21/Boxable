@@ -1,5 +1,5 @@
 import type { DrawerDocument } from './document';
-export interface Draft { document:DrawerDocument; photo:File|null; id:string|null; revision:number; photoPath:string|null; dirty?:boolean; photoChanged?:boolean; }
+export interface Draft { pendingAccountSave?:boolean; document:DrawerDocument; photo:File|null; id:string|null; revision:number; photoPath:string|null; dirty?:boolean; photoChanged?:boolean; }
 function database():Promise<IDBDatabase> { return new Promise((resolve,reject)=>{
  const request=indexedDB.open('boxable-drafts',1);
  request.onupgradeneeded=()=>request.result.createObjectStore('drafts');
