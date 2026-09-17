@@ -171,7 +171,7 @@ _CAD_LOCK = threading.Lock()
 _MESH_CACHE = MeshCache()
 
 
-def _weld_mesh(vertices, triangles, digits=4):
+def _weld_mesh(vertices, triangles, digits=4, *, vertex_count=None):
     """Merge vertices that OCC duplicated on shared face boundaries.
 
     shape.tessellate() triangulates each face independently, so edges that
@@ -180,7 +180,7 @@ def _weld_mesh(vertices, triangles, digits=4):
     """
     key_to_new: dict[tuple, int] = {}
     new_verts: list = []
-    remap = [0] * len(vertices)
+    remap = [0] * (len(vertices) if vertex_count is None else vertex_count)
     for i, vertex in enumerate(vertices):
         key = (round(vertex[0], digits), round(vertex[1], digits), round(vertex[2], digits))
         index = key_to_new.get(key)
@@ -203,8 +203,9 @@ def _tessellate_shape(shape, cache_key: str, tolerance: float):
         return cached
     bb = shape.BoundingBox()
     raw_vertices, triangles = shape.tessellate(tolerance)
-    vertices = [(v.x - bb.xmin, v.y - bb.ymin, v.z - bb.zmin) for v in raw_vertices]
-    vertices, welded_tris = _weld_mesh(vertices, [tuple(t) for t in triangles])
+    vertices = ((v.x - bb.xmin, v.y - bb.ymin, v.z - bb.zmin) for v in raw_vertices)
+    vertices, welded_tris = _weld_mesh(vertices, triangles, vertex_count=len(raw_vertices))
+    del raw_vertices, triangles
     extents = (bb.xlen, bb.ylen, bb.zlen)
     result = (vertices, welded_tris, extents)
     _MESH_CACHE[cache_key] = result

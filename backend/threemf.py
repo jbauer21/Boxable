@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import io
 import zipfile
+from collections.abc import Callable
+from os import PathLike
+from typing import BinaryIO
 from dataclasses import asdict
 from xml.sax.saxutils import escape
 
@@ -51,25 +54,18 @@ def _fmt(value: float) -> str:
     return f"{value:.4f}".rstrip("0").rstrip(".")
 
 
-def _mesh_xml(vertices, triangles) -> str:
-    verts = "\n".join(
-        f'          <vertex x="{_fmt(x)}" y="{_fmt(y)}" z="{_fmt(z)}"/>'
-        for x, y, z in vertices
-    )
-    tris = "\n".join(
-        f'          <triangle v1="{a}" v2="{b}" v3="{c}"/>'
-        for a, b, c in triangles
-    )
-    return (
-        "      <mesh>\n"
-        "        <vertices>\n"
-        f"{verts}\n"
-        "        </vertices>\n"
-        "        <triangles>\n"
-        f"{tris}\n"
-        "        </triangles>\n"
-        "      </mesh>"
-    )
+def _write_mesh(write, vertices, triangles):
+    write("      <mesh>\n        <vertices>\n")
+    for i, (x, y, z) in enumerate(vertices):
+        if i:
+            write("\n")
+        write(f'          <vertex x="{_fmt(x)}" y="{_fmt(y)}" z="{_fmt(z)}"/>')
+    write("\n        </vertices>\n        <triangles>\n")
+    for i, (a, b, c) in enumerate(triangles):
+        if i:
+            write("\n")
+        write(f'          <triangle v1="{a}" v2="{b}" v3="{c}"/>')
+    write("\n        </triangles>\n      </mesh>")
 
 
 def _placement_offset(spec: ContainerSpec, col: int, row: int, rotated: bool,
@@ -105,84 +101,96 @@ def _transform(dx: float, dy: float, rotated: bool, extents: tuple[float, float,
     return f"1 0 0 0 1 0 0 0 1 {_fmt(dx)} {_fmt(dy)} 0"
 
 
+def write_3mf(
+    destination: str | PathLike | BinaryIO,
+    items: list[tuple[ContainerSpec, int, int, bool]],
+    container_mesh: Callable[[ContainerSpec], tuple],
+    baseplates: list[tuple[int, int, int, int]] | None = None,
+    baseplate_mesh: Callable[[int, int], tuple] | None = None,
+) -> None:
+    """Write to a path or binary file, resolving one unique mesh at a time.
+
+    Providers accept a ContainerSpec or (length_u, width_u), respectively.
+    Only IDs and extents survive serialization; providers may use a bounded cache.
+    The caller owns destination and handles partial-file cleanup on failure.
+    """
+    key_to_id = {}
+    extents_by_key = {}
+    plate_key_to_id = {}
+    plates = baseplates or []
+    with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", CONTENT_TYPES)
+        archive.writestr("_rels/.rels", RELS)
+        with archive.open("3D/3dmodel.model", "w", force_zip64=True) as entry:
+            with io.BufferedWriter(entry, buffer_size=64 * 1024) as buffer:
+                def write(text):
+                    # Bound encoded writes even for unusually long names.
+                    for offset in range(0, len(text), 16 * 1024):
+                        buffer.write(text[offset:offset + 16 * 1024].encode("utf-8"))
+
+                write('<?xml version="1.0" encoding="UTF-8"?>\n'
+                      '<model unit="millimeter" xml:lang="en-US" '
+                      'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">\n'
+                      '  <metadata name="Application">Boxable</metadata>\n'
+                      '  <resources>\n')
+                count = 0
+                for spec, *_ in items:
+                    key = geometry_key(spec)
+                    if key in key_to_id:
+                        continue
+                    count += 1
+                    key_to_id[key] = count
+                    if count > 1:
+                        write("\n")
+                    vertices, triangles, extents = container_mesh(spec)
+                    extents_by_key[key] = extents
+                    write(f'    <object id="{count}" name="{escape(spec.name)}" type="model">\n')
+                    _write_mesh(write, vertices, triangles)
+                    write("\n    </object>")
+                    del vertices, triangles
+                for length_u, width_u, *_ in plates:
+                    key = baseplate_key(length_u, width_u)
+                    if key in plate_key_to_id:
+                        continue
+                    count += 1
+                    plate_key_to_id[key] = count
+                    if count > 1:
+                        write("\n")
+                    vertices, triangles, _ = baseplate_mesh(length_u, width_u)
+                    write(f'    <object id="{count}" name="Baseplate {length_u}×{width_u}" type="model">\n')
+                    _write_mesh(write, vertices, triangles)
+                    write("\n    </object>")
+                    del vertices, triangles
+                write("\n  </resources>\n  <build>\n")
+                first = True
+                for spec, col, row, rotated in items:
+                    key = geometry_key(spec)
+                    extents = extents_by_key[key]
+                    dx, dy = _placement_offset(spec, col, row, rotated, extents)
+                    transform = _transform(dx, dy, rotated, extents)
+                    if not first:
+                        write("\n")
+                    first = False
+                    write(f'      <item objectid="{key_to_id[key]}" transform="{transform}"/>')
+                for length_u, width_u, col, row in plates:
+                    key = baseplate_key(length_u, width_u)
+                    transform = _transform(col * GRID_UNIT_MM, row * GRID_UNIT_MM, False, (0., 0., 0.))
+                    if not first:
+                        write("\n")
+                    first = False
+                    write(f'      <item objectid="{plate_key_to_id[key]}" transform="{transform}"/>')
+                write("\n  </build>\n</model>\n")
+
+
 def build_3mf(
     items: list[tuple[ContainerSpec, int, int, bool]],
     meshes: dict[str, tuple],
     baseplates: list[tuple[int, int, int, int]] | None = None,
     baseplate_meshes: dict[str, tuple] | None = None,
 ) -> bytes:
-    """Assemble a 3MF from placed containers and optional baseplates.
-
-    `items` is (spec, col, row, rotated) for each packed instance.
-    `meshes` maps geometry_key(spec) -> (vertices, triangles, extents).
-    `baseplates` is (length_u, width_u, col, row).
-    `baseplate_meshes` maps baseplate_key(length_u, width_u) -> mesh tuple.
-    """
-    key_to_id: dict[str, int] = {}
-    object_xml: list[str] = []
-    for spec, *_ in items:
-        key = geometry_key(spec)
-        if key in key_to_id:
-            continue
-        oid = len(key_to_id) + 1
-        key_to_id[key] = oid
-        vertices, triangles, _ = meshes[key]
-        object_xml.append(
-            f'    <object id="{oid}" name="{escape(spec.name)}" type="model">\n'
-            f"{_mesh_xml(vertices, triangles)}\n"
-            "    </object>"
-        )
-
-    plate_key_to_id: dict[str, int] = {}
-    plates = baseplates or []
-    plate_meshes = baseplate_meshes or {}
-    for length_u, width_u, *_ in plates:
-        key = baseplate_key(length_u, width_u)
-        if key in plate_key_to_id:
-            continue
-        oid = len(key_to_id) + len(plate_key_to_id) + 1
-        plate_key_to_id[key] = oid
-        vertices, triangles, _ = plate_meshes[key]
-        object_xml.append(
-            f'    <object id="{oid}" name="Baseplate {length_u}×{width_u}" type="model">\n'
-            f"{_mesh_xml(vertices, triangles)}\n"
-            "    </object>"
-        )
-
-    build_items = []
-    for spec, col, row, rotated in items:
-        key = geometry_key(spec)
-        oid = key_to_id[key]
-        extents = meshes[key][2]
-        dx, dy = _placement_offset(spec, col, row, rotated, extents)
-        transform = _transform(dx, dy, rotated, extents)
-        build_items.append(f'      <item objectid="{oid}" transform="{transform}"/>')
-
-    for length_u, width_u, col, row in plates:
-        key = baseplate_key(length_u, width_u)
-        oid = plate_key_to_id[key]
-        dx = col * GRID_UNIT_MM
-        dy = row * GRID_UNIT_MM
-        transform = _transform(dx, dy, False, (0.0, 0.0, 0.0))
-        build_items.append(f'      <item objectid="{oid}" transform="{transform}"/>')
-
-    model = (
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<model unit="millimeter" xml:lang="en-US" '
-        'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">\n'
-        "  <metadata name=\"Application\">Boxable</metadata>\n"
-        "  <resources>\n"
-        + "\n".join(object_xml)
-        + "\n  </resources>\n"
-        "  <build>\n"
-        + "\n".join(build_items)
-        + "\n  </build>\n"
-        "</model>\n"
-    )
-
+    """Compatibility API; production uses write_3mf to avoid a RAM archive."""
     buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr("[Content_Types].xml", CONTENT_TYPES)
-        archive.writestr("_rels/.rels", RELS)
-        archive.writestr("3D/3dmodel.model", model)
+    plate_meshes = baseplate_meshes or {}
+    write_3mf(buffer, items, lambda spec: meshes[geometry_key(spec)], baseplates,
+              lambda length, width: plate_meshes[baseplate_key(length, width)])
     return buffer.getvalue()

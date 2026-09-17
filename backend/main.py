@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import tempfile
+import threading
 import time
 import uuid
 
@@ -14,13 +17,13 @@ import cv2
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from detection import detect_and_measure, refine_markers
 from geometry import GRID_UNIT_MM, ContainerSpec
 from homography import measure_drawer
-from threemf import baseplate_key, build_3mf, geometry_key
+from threemf import geometry_key, write_3mf
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -221,6 +224,24 @@ def preview(request: PreviewRequest):
     return {"items": items}
 
 
+# Bound active export mesh/serialization memory independently of slow downloads.
+_EXPORT_LOCK = threading.Lock()
+
+
+class Temporary3MFResponse(FileResponse):
+    async def __call__(self, scope, receive, send):
+        # Do not delegate deferred path reads to the server: cleanup must happen
+        # only after FileResponse has finished reading the archive itself.
+        scope = {**scope, "extensions": {
+            key: value for key, value in scope.get("extensions", {}).items()
+            if key != "http.response.pathsend"
+        }}
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            os.unlink(self.path)
+
+
 @app.post("/generate")
 def generate(request: GenerateRequest):
     if not request.items and not request.baseplates:
@@ -233,29 +254,29 @@ def generate(request: GenerateRequest):
     logger.info("3MF %s started: %d containers, %d baseplates", request_id, len(specs), len(request.baseplates))
     from generators import tessellate_baseplate, tessellate_container
 
-    meshes: dict[str, tuple] = {}
-    placed: list[tuple[ContainerSpec, int, int, bool]] = []
-    for item, spec in zip(request.items, specs):
-        key = geometry_key(spec)
-        if key not in meshes:
-            logger.info("3MF %s building container %dx%dx%d (%s)", request_id, spec.length_u, spec.width_u, spec.height_u, spec.kind)
-            meshes[key] = tessellate_container(spec)
-        placed.append((spec, item.col, item.row, item.rotated))
+    placed = [(spec, item.col, item.row, item.rotated) for item, spec in zip(request.items, specs)]
+    plates = [(p.length_u, p.width_u, p.col, p.row) for p in request.baseplates]
 
-    plate_meshes: dict[str, tuple] = {}
-    plates: list[tuple[int, int, int, int]] = []
-    for plate in request.baseplates:
-        key = baseplate_key(plate.length_u, plate.width_u)
-        if key not in plate_meshes:
-            logger.info("3MF %s building baseplate %dx%d", request_id, plate.length_u, plate.width_u)
-            plate_meshes[key] = tessellate_baseplate(plate.length_u, plate.width_u)
-        plates.append((plate.length_u, plate.width_u, plate.col, plate.row))
+    def container_mesh(spec):
+        logger.info("3MF %s building container %dx%dx%d (%s)", request_id, spec.length_u, spec.width_u, spec.height_u, spec.kind)
+        return tessellate_container(spec)
 
-    logger.info("3MF %s assembling archive", request_id)
-    payload = build_3mf(placed, meshes, plates, plate_meshes)
-    logger.info("3MF %s completed in %.1fs (%d bytes)", request_id, time.monotonic() - started, len(payload))
-    return Response(
-        content=payload,
-        media_type="model/3mf",
-        headers={"Content-Disposition": 'attachment; filename="boxable.3mf"'},
-    )
+    def plate_mesh(length, width):
+        logger.info("3MF %s building baseplate %dx%d", request_id, length, width)
+        return tessellate_baseplate(length, width)
+
+    with _EXPORT_LOCK:
+        with tempfile.NamedTemporaryFile(prefix="boxable-", suffix=".3mf", delete=False) as output:
+            path = output.name
+        try:
+            write_3mf(path, placed, container_mesh, plates, plate_mesh)
+            size = os.path.getsize(path)
+            response = Temporary3MFResponse(
+                path, media_type="model/3mf",
+                headers={"Content-Disposition": 'attachment; filename="boxable.3mf"'},
+            )
+            logger.info("3MF %s completed in %.1fs (%d bytes)", request_id, time.monotonic() - started, size)
+        except BaseException:
+            os.unlink(path)
+            raise
+    return response
